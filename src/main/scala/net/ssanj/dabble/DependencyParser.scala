@@ -14,8 +14,8 @@ final case class ScalaVersionDerived (org: String, name: String, version: String
 
 /**
  * Parses the inputs into a Seq[Dependency. Dependencies can be specified in two forms:
- *  1. org %% name % version [[ScalaVersionDerived]]
  *  1. org  % name % version [[ScalaVersionSupplied]]
+ *  1. org %% name % version [[ScalaVersionDerived]]
  *
  * Multiple dependencies should be separated by "+".
  *
@@ -55,8 +55,7 @@ trait DependencyParser  {
     case Seq("+", org, "%", name, "%", version, t@_*) =>
       parse(t, dependencies :+ ScalaVersionSupplied(org, name, version))
     case Seq("+") if (!dependencies.isEmpty) => dependencies.right
-    case xs =>
-      s"unable to derive dependencies from: $xs".left
+    case xs => s"unable to derive dependencies from: $xs".left
   }
 }
 
