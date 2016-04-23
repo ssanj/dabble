@@ -1,0 +1,6 @@
+*.sublime-*
+target
+.ctags_srcs
+.tags
+project/project
+project/target
