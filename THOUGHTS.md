@@ -42,21 +42,10 @@
    It would be cool to replace the version of a name section with what was supplied.
 
    Eg. dabble -n scalaz 7.1.4 (replaces stored version of 7.1.2 -> 7.1.4)
-
-### Scratch
-
-```{.scala}
-sealed trait Dependency
-final case class ScalaSpecified(org: String, name: String, version: String)
-final case class ScalaDerived(org: String, name: String, version: String)
-)
-
-case Array() => return collected dependencies
-case (org, %%, name %, version, t@_*) =>
-    //collect dependency
-    //recurse with t
-case (org, %,  name %, version, t@_*) =>
-case ("+", org, %%, name %, version, t@_*) =>
-case xs => //error
-```
-
+5. Create UUID for project name.
+6. Create UUID for org.
+7. Add more information about run configuration:
+  1. Mention that the default template can be overridden with a -t parameter or by creating a template.sbt file in the ~/.dabble directory
+  2. Specify home and working directory and whether the default template is being used.
+8. Changed WrappedArray(...) output to something nicer.
+9. Possibly create history file to store previous executions. Then allow using a previous execution from history.
