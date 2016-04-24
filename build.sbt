@@ -4,10 +4,10 @@ organization := "net.ssanj"
 
 version := "0.0.1"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
-  "org.scalaz"     %% "scalaz-core"  % "7.1.4",
+  "org.scalaz"     %% "scalaz-core"  % "7.2.2",
   "com.lihaoyi"    %% "ammonite-ops" % "0.5.7",
   "org.scalatest"  %% "scalatest"    % "2.2.4"  % "test",
   "org.scalacheck" %% "scalacheck"   % "1.12.5" % "test"

@@ -46,7 +46,6 @@ trait DabbleProps {
       deps   <- Gen.listOfN(length, Gen.oneOf(genScalaVersionDerived, genScalaVersionSupplied))
     } yield deps).map(dl => intersperse(dl, Seq("+")).flatten)
 
-
   private [dabble] def emptyInput: Gen[Seq[String]] = for {
     length <- Gen.choose(0, 10)
     deps   <- Gen.const(List.fill(length)(" "))

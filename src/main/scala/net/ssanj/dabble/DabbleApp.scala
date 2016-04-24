@@ -1,8 +1,11 @@
 package net.ssanj.dabble
 
+import scala.util.Try
 import ammonite.ops._
+import scalaz._
+import scalaz.syntax.std.`try`._
 
-object DabbleApp {
+object DabbleApp extends DependencyParser with DependencyPrinter {
 
   val templateSBTFile = """name := "Dabble"
 
@@ -12,14 +15,30 @@ version := "0.0.1"
 
 scalaVersion := "2.11.7""""
 
+  private case class ExecutionResult(message: Option[String], code: Int)
+
   def main(args: Array[String]) {
-    val dabbleHome = Path(System.getProperty("user.home"))/".dabble"
-    val dabbleWork = dabbleHome/'work
-    val newLine = System.getProperty("line.separator")
-    val parsedArgs = args.map(a => if (!a.startsWith("%")) s""""$a"""" else a)
-    write.over (dabbleWork/"build.sbt", templateSBTFile + newLine + newLine + "libraryDependencies += " + parsedArgs.mkString(" "))
-    val result = %('sbt, "console")(dabbleWork)
-    println(s"exit result: $result")
+    val result = parse(args).map(print).fold(processingFailed, build)
+    exit(result)
+  }
+
+  private def exit(result: ExecutionResult): Unit = {
+    result.message.foreach(m => println(m))
+    System.exit(result.code)
+  }
+
+  private def processingFailed(error: String): ExecutionResult = ExecutionResult(Option(error), 1)
+
+  private def build(dependencies: String): ExecutionResult = {
+    Try {
+      val dabbleHome = Path(System.getProperty("user.home"))/".dabble"
+      val dabbleWork = dabbleHome/'work
+      val newLine = System.getProperty("line.separator")
+
+      write.over (dabbleWork/"build.sbt", templateSBTFile + newLine + newLine + dependencies)
+      val result = %('sbt, "console")(dabbleWork)
+      ExecutionResult(if (result == 0) Option("Dabble completed successfully.") else Option("Could not launch console. See SBT output for details."), result)
+    }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
   }
 }
 
