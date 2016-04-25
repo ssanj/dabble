@@ -29,4 +29,3 @@ scalacOptions ++= Seq(
 
 assemblyJarName in assembly := "dabble.jar"
 
-

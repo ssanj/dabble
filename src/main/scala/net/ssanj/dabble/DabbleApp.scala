@@ -18,6 +18,7 @@ scalaVersion := "2.11.7""""
   private case class ExecutionResult(message: Option[String], code: Int)
 
   def main(args: Array[String]) {
+    println(s"Dabble version: ${DabbleInfo.version}-${DabbleInfo.buildInfoBuildNumber}")
     val result = parse(args).map(print).fold(processingFailed, build)
     exit(result)
   }
