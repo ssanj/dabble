@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/ssanj/dabble.svg?branch=master)](https://travis-ci.org/ssanj/dabble)
+
 # Dabble
 
 Ever wanted to play around with a new Scala library but wished there was an easier way to put it on the classpath of the Scala repl? Tired of manually copying lengthy file paths to specify the classpath?
