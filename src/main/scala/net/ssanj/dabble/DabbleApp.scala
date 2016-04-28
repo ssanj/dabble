@@ -18,7 +18,7 @@ scalaVersion := "2.11.7""""
   private case class ExecutionResult(message: Option[String], code: Int)
 
   def main(args: Array[String]) {
-    println(s"Dabble version: ${DabbleInfo.version}-${DabbleInfo.buildInfoBuildNumber}")
+    println(title)
     val result = parse(args).map(print).fold(processingFailed, build)
     exit(result)
   }
@@ -37,9 +37,14 @@ scalaVersion := "2.11.7""""
       val newLine = System.getProperty("line.separator")
 
       write.over (dabbleWork/"build.sbt", templateSBTFile + newLine + newLine + dependencies)
-      val result = %('sbt, "console")(dabbleWork)
+      val result = %(getSBTExec, "console")(dabbleWork)
       ExecutionResult(if (result == 0) Option("Dabble completed successfully.") else Option("Could not launch console. See SBT output for details."), result)
     }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
   }
+
+  private def getSBTExec = if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "sbt.bat" else "sbt"
+
+  private val title = s"Dabble version: ${DabbleInfo.version}-${DabbleInfo.buildInfoBuildNumber}"
+
 }
 
