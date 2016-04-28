@@ -7,7 +7,7 @@ import scalaz.syntax.std.`try`._
 
 object DabbleApp extends DependencyParser with DependencyPrinter {
 
-  val templateSBTFile = """name := "Dabble"
+  private val inMemSbtTemplate = """name := "Dabble"
 
 organization := "biz.awesome"
 
@@ -15,16 +15,29 @@ version := "0.0.1"
 
 scalaVersion := "2.11.7""""
 
-  private case class ExecutionResult(message: Option[String], code: Int)
+  private val newline  = System.getProperty("line.separator")
+  private val userHome = Path(System.getProperty("user.home"))
+
+  private final case class ExecutionResult(message: Option[String], code: Int)
+
+  private final case class DabbleWork(path: Path)
+  private final case class DabbleTemplates(path: Path)
+
+  private final case class DabbleHome(path: Path) {
+    def work = DabbleWork(path/'work)
+    def templates = DabbleTemplates(path/'templates)
+  }
+
+  private val dabbleHome = DabbleHome(userHome/".dabble")
 
   def main(args: Array[String]) {
-    println(title)
+    log(title)
     val result = parse(args).map(print).fold(processingFailed, build)
     exit(result)
   }
 
   private def exit(result: ExecutionResult): Unit = {
-    result.message.foreach(m => println(m))
+    result.message.foreach(m => log(m))
     System.exit(result.code)
   }
 
@@ -32,19 +45,34 @@ scalaVersion := "2.11.7""""
 
   private def build(dependencies: String): ExecutionResult = {
     Try {
-      val dabbleHome = Path(System.getProperty("user.home"))/".dabble"
-      val dabbleWork = dabbleHome/'work
-      val newLine = System.getProperty("line.separator")
 
-      write.over (dabbleWork/"build.sbt", templateSBTFile + newLine + newLine + dependencies)
-      val result = %(getSBTExec, "console")(dabbleWork)
+      genBuildFileFrom(dabbleHome, dependencies)
+
+      val result = %(getSBTExec, "console")(dabbleHome.work.path)
       ExecutionResult(if (result == 0) Option("Dabble completed successfully.") else Option("Could not launch console. See SBT output for details."), result)
     }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
   }
 
+  private def genBuildFileFrom(home: DabbleHome, dependencies: String): Unit = {
+    val defaultSbtTemplate   = home.path/"build.sbt"
+    val outputSBTFile        = home.work.path/"build.sbt"
+    val sbtTemplateContent   =
+      if (exists(defaultSbtTemplate)) {
+        log(s"Using default sbt template at: ${outputSBTFile}")
+        read(defaultSbtTemplate)
+      } else {
+        log("Using in-memory sbt template. Create a build.sbt file in ~/.dabble/ to override.")
+        inMemSbtTemplate
+      }
+
+     write.over (outputSBTFile, sbtTemplateContent + newline + newline + dependencies)
+  }
+
   private def getSBTExec = if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "sbt.bat" else "sbt"
 
-  private val title = s"Dabble version: ${DabbleInfo.version}-${DabbleInfo.buildInfoBuildNumber}"
+  private val title = s"Welcome to dabble version: ${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}"
+
+  private def log(messages: String*): Unit = println(messages.mkString(newline))
 
 }
 
