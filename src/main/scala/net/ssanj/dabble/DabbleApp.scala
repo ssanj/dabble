@@ -58,7 +58,7 @@ scalaVersion := "2.11.7""""
     val outputSBTFile        = home.work.path/"build.sbt"
     val sbtTemplateContent   =
       if (exists(defaultSbtTemplate)) {
-        log(s"Using default sbt template at: ${outputSBTFile}")
+        log(s"Using default sbt template at: ${defaultSbtTemplate}")
         read(defaultSbtTemplate)
       } else {
         log("Using in-memory sbt template. Create a build.sbt file in ~/.dabble/ to override.")
