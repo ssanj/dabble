@@ -32,4 +32,9 @@ trait DependencyPrinter {
     formatted.mkString +
     s"$newline)"
   }
+
+  def printText(deps: Seq[Dependency]): String =  {
+    val depStrings = deps.map(Show[Dependency].shows).map(_.replace("\"", ""))
+    depStrings.zipWithIndex.map{ case (d, i) => s"[${i+1}] $d" }.mkString(escapedNewline)
+  }
 }
