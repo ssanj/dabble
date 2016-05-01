@@ -31,3 +31,8 @@ scalacOptions ++= Seq(
 assemblyJarName in assembly := "dabble.jar"
 
 mainClass in assembly := Some("net.ssanj.dabble.DabbleApp")
+
+import sbtassembly.AssemblyPlugin.defaultShellScript
+
+assemblyOption in assembly := (assemblyOption in assembly).value.copy(prependShellScript = Some(defaultShellScript))
+

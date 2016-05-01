@@ -27,6 +27,8 @@ trait Executor { self: DefaultTemplate with DependencyPrinter =>
 
   protected def processingFailed(error: String): ExecutionResult = ExecutionResult(Option(error), 1)
 
+  protected val processingFailed: ExecutionResult = ExecutionResult(None, 1)
+
   protected def build(dependencies: Seq[Dependency]): ExecutionResult = {
     Try {
 

@@ -14,7 +14,8 @@ object DabbleApp extends DependencyParser  with
         getBanner.foreach(println)
         val result = parse(deps)fold(processingFailed, build)
         exit(result)
-      case None => exit(processingFailed("Could not parse dependencies. Please run with --help for usage."))
+      case None =>
+        exit(processingFailed)
     }
   }
 }
