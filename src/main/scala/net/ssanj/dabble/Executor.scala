@@ -52,7 +52,7 @@ trait Executor { self: DefaultTemplate with DependencyPrinter =>
       }
 
       val dependencyText      = printText(dependencies)
-      val initialCommands     = s"""initialCommands := "println(\\"Dabble injected the following libraries:${escapedNewline}${dependencyText}\\")" """
+      val initialCommands     = s"""initialCommands := "println(\\"${escapedNewline}Dabble injected the following libraries:${escapedNewline}${dependencyText}${escapedNewline}\\")""""
       val sbtDependencyString = print(dependencies)
 
      write.over (outputSBTFile, sbtTemplateContent + newline + newline + sbtDependencyString + newline + newline + initialCommands)
