@@ -8,7 +8,7 @@ import net.ssanj.dabble.Implicits._
  */
 trait DependencyPrinter {
   /**
-   * Prints out the libraryDependency String used by SBT.
+   * Returns the libraryDependency String used by SBT.
    *
    * Example:
    *
@@ -33,6 +33,27 @@ trait DependencyPrinter {
     s"$newline)"
   }
 
+  /**
+   * Returns the text-only representation of the dependencies supplied. Each dependency
+   * is processed as follows:
+   *
+   * 1. An index number is added as a prefix.
+   * 2. Quotes are removed.
+   * 3. Dependencies are separated by a newline.
+   *
+   * Example:
+   *
+   * {{{
+   * [1] org.scalaz %% scalaz-core % 7.1.4
+   * [2] org.scalatest %% scalatest % 2.2.4
+   * }}}
+   *
+   * This is to be used primarily for displaying the libraries used from within the SBT console.
+   *
+   * @param deps The dependencies to make into text.
+   * @return the textual representation.
+   *
+   */
   def printText(deps: Seq[Dependency]): String =  {
     val depStrings = deps.map(Show[Dependency].shows).map(_.replace("\"", ""))
     depStrings.zipWithIndex.map{ case (d, i) => s"[${i+1}] $d" }.mkString(escapedNewline)

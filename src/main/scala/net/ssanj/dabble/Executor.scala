@@ -56,7 +56,5 @@ trait Executor { self: DefaultTemplate with DependencyPrinter =>
      write.over (outputSBTFile, sbtTemplateContent + newline + newline + sbtDependencyString + newline + newline + initialCommands)
   }
 
-  protected def getSBTExec = if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "sbt.bat" else "sbt"
-
-  protected val title = s"Welcome to dabble version: ${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}"
+  def getSBTExec = if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "sbt.bat" else "sbt"
 }

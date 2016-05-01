@@ -28,9 +28,9 @@ trait TerminalSupport {
   }
 
   val parser = new scopt.OptionParser[DabbleRunConfig]("Dabble") {
-    head("dabble", DabbleInfo.version)
+    head(s"$title")
     help("help") abbr("h")
-    toggle("version", Option("v"))(_ => println(s"dabble version ${DabbleInfo.version}"))(this)
+    toggle("version", Option("v"))(_ => println(s"$title"))(this)
     dependencies(this)
   }
 }

@@ -12,11 +12,12 @@ package object dabble {
     }
   }
 
-  val newline          = System.getProperty("line.separator")
-  val userHome         = System.getProperty("user.home")
-  val tab              = "\t"
-  val escapedNewline   = "\\\\n"
-  val defaultBuildFile = "build.sbt"
+  val newline           = System.getProperty("line.separator")
+  val userHome          = System.getProperty("user.home")
+  val tab               = "\t"
+  val escapedNewline    = "\\\\n"
+  val defaultBuildFile  = "build.sbt"
+  lazy val title        = s"${DabbleInfo.name} version: ${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}"
 
   def log(messages: String*): Unit = println(s"${DabbleInfo.name}: ${messages.mkString(newline)}")
 }
