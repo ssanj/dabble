@@ -17,4 +17,6 @@ package object dabble {
   val tab              = "\t"
   val escapedNewline   = "\\\\n"
   val defaultBuildFile = "build.sbt"
+
+  def log(messages: String*): Unit = println(s"${DabbleInfo.name}: ${messages.mkString(newline)}")
 }
