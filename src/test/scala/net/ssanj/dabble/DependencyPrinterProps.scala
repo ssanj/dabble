@@ -2,6 +2,7 @@ package net.ssanj.dabble
 
 import org.scalacheck.Properties
 import org.scalacheck.{Prop, Gen}
+import org.scalacheck.Prop.BooleanOperators
 import scalaz.\/-
 
 object DependencyPrinterProps             extends
@@ -18,26 +19,34 @@ object DependencyPrinterProps             extends
    * )
    */
   property("prints valid libraryDependencies") =
-    Prop.forAll(genDependencyList) { inputs: Seq[String] =>
-        val \/-(deps) = DependencyParser.parse(inputs)
-        val newline = System.getProperty("line.separator")
+    Prop.forAll(genDependencies) { deps: Seq[Dependency] =>
         val tab = "  "
         val output = print(deps)
 
-        val dependencyLine = inputs.grouped(6).toList
+        val dependencyLines = deps map {
+          case ScalaVersionSupplied(org, name, version) => s""""${org}" % "${name}" % "${version}""""
+          case ScalaVersionDerived (org, name, version) => s""""${org}" %% "${name}" % "${version}""""
+        }
 
         val dependencyString =
-          s"libraryDependencies ++= Seq($newline$tab" +
-          dependencyLine.map { xs =>
-            xs.map {
-              case x@"%" => x
-              case x@"%%" => x
-              case x@"+" => x
-              case x => s""""${x}""""
-            }.mkString(" ").
-              replace(" +", s",$newline$tab")
-          }.mkString +
-          s"$newline)"
-          dependencyString == output
+          s"libraryDependencies ++= Seq($newline" +
+          dependencyLines.map(s"$tab" + _).mkString("," + newline) +
+          s"${newline})"
+
+        (dependencyString == output) :| labeled(dependencyString, output)
     }
+
+ property("prints text representation of dependencies") =
+  Prop.forAll(genDependencies) { deps: Seq[Dependency] =>
+    val output = printText(deps)
+
+    val lines =
+      deps.map {
+        case ScalaVersionSupplied(org, name, version) => s"$org % $name % $version"
+        case ScalaVersionDerived (org, name, version) => s"$org %% $name % $version"
+      }
+
+    val text = lines.zipWithIndex.map { case (l, i) => s"[${i+1}] $l" }.mkString(escapedNewline)
+    (text == output) :| labeled(text, output)
   }
+}

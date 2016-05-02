@@ -1,6 +1,6 @@
 package net.ssanj.dabble
 
-import org.scalacheck.Gen
+import org.scalacheck.{Gen, Shrink}
 import org.scalacheck.Gen.{posNum, negNum}
 import scalaz._
 import scalaz.std.list._
@@ -46,9 +46,21 @@ trait DabbleProps {
       deps   <- Gen.listOfN(length, Gen.oneOf(genScalaVersionDerived, genScalaVersionSupplied))
     } yield deps).map(dl => intersperse(dl, Seq("+")).flatten)
 
+  private [dabble] def genDependencies: Gen[Seq[Dependency]] =
+    genDependencyList.map(d => DependencyParser.parse(d).toOption.get)
+
   private [dabble] def emptyInput: Gen[Seq[String]] = for {
     length <- Gen.choose(0, 10)
     deps   <- Gen.const(List.fill(length)(" "))
   } yield deps
+
+  private[dabble] def labeled(actual: String, expected: String): String = s"expected:${newline}${expected}${newline}got:${newline}$actual"
+
+  private[dabble] implicit val dependencyShrink: Shrink[Seq[Dependency]] = Shrink[Seq[Dependency]] {
+    case Seq() => Stream.empty
+    case Seq(one) => Stream.empty
+    case Seq(one, two, _*) => Stream(Seq(one))
+    case Seq(one, two, three, _*) => Stream(Seq(one, two))
+  }
 }
 

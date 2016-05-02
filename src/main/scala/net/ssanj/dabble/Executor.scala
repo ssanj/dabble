@@ -31,10 +31,10 @@ trait Executor { self: DefaultTemplate with DependencyPrinter =>
 
   protected def build(dependencies: Seq[Dependency]): ExecutionResult = {
     Try {
-
+      log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
       genBuildFileFrom(dabbleHome, dependencies)
 
-      val result = %(getSBTExec, "console")(dabbleHome.work.path)
+      val result = %(getSBTExec, "console-quick")(dabbleHome.work.path)
       ExecutionResult(if (result == 0) Option("Dabble completed successfully.") else Option("Could not launch console. See SBT output for details."), result)
     }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
   }
