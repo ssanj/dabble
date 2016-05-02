@@ -18,11 +18,11 @@ Let Dabble handle the details for you. Simply run __dabble__ with the libraries 
 ```
 sbt assembly
 ```
-Once that completes, you can add dabble to your path:
+Once that completes, you can add dabble to your path and make it executable:
 
 ```
 cp target/scala_version/dabble ~/bin/
-chmod +x dabble
+chmod +x ~/bin/dabble
 ```
 
 You can run dabble as:
