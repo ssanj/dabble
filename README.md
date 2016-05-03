@@ -50,7 +50,7 @@ Dabble operates out of the ~/.dabble directory. When you run dabble, a minimal b
 You can get a full list of arguments to dabble by running it with -h or --help:
 
 ```
-Dabble version: 0.0.1-b325
+Dabble version: 0.0.1-b450
 Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
 
   -h | --help
@@ -61,7 +61,32 @@ Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
         Format:
     "org1" %  "name1" % "version1"
     "org2" %% "name2" % "version2"
-    "org1" %% "name1" % "version1" + "org2" %% "name2" % "version2
+    "org3" %% "name3" % "version3 % "config""
+    "org1" %% "name1" % "version1" + "org2" %% "name2" % "version2"
+```
+
+## Running
+
+```
+dabble <dependencies>
+```
+
+Single dependency:
+
+```
+dabble "org.scalaz" %% "scalaz-core" % "7.2.2"
+```
+
+Single test dependency:
+
+```
+dabble "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+```
+
+Multiple dependencies:
+
+```
+dabble "org.scalaz" %% "scalaz-core" % "7.2.2" + "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 ```
 
 ## Output
