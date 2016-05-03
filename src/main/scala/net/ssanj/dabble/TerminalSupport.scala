@@ -14,7 +14,8 @@ trait TerminalSupport {
       text("Format:" + newline + tab +
            """"org1" %  "name1" % "version1"""" + newline + tab +
            """"org2" %% "name2" % "version2"""" + newline + tab +
-           """"org1" %% "name1" % "version1" + "org2" %% "name2" % "version2"""
+           """"org3" %% "name3" % "version3 % "config""""" + newline + tab +
+           """"org1" %% "name1" % "version1" + "org2" %% "name2" % "version2""""
           )
   }
 

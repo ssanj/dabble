@@ -7,8 +7,8 @@ package object dabble {
 
   object Implicits {
     implicit val dependencyShows: Show[Dependency] = shows {
-      case ScalaVersionSupplied(org, name, version) => s""""${org}" % "${name}" % "$version""""
-      case ScalaVersionDerived (org, name, version) => s""""${org}" %% "${name}" % "$version""""
+      case ScalaVersionSupplied(org, name, version, _) => s""""${org}" % "${name}" % "$version""""
+      case ScalaVersionDerived (org, name, version, _) => s""""${org}" %% "${name}" % "$version""""
     }
   }
 

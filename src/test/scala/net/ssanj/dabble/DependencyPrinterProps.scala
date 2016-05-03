@@ -21,11 +21,11 @@ object DependencyPrinterProps             extends
   property("prints valid libraryDependencies") =
     Prop.forAll(genDependencies) { deps: Seq[Dependency] =>
         val tab = "  "
-        val output = print(deps)
+        val output = printLibraryDependency(deps)
 
         val dependencyLines = deps map {
-          case ScalaVersionSupplied(org, name, version) => s""""${org}" % "${name}" % "${version}""""
-          case ScalaVersionDerived (org, name, version) => s""""${org}" %% "${name}" % "${version}""""
+          case ScalaVersionSupplied(org, name, version, _) => s""""${org}" % "${name}" % "${version}""""
+          case ScalaVersionDerived (org, name, version, _) => s""""${org}" %% "${name}" % "${version}""""
         }
 
         val dependencyString =
@@ -42,8 +42,8 @@ object DependencyPrinterProps             extends
 
     val lines =
       deps.map {
-        case ScalaVersionSupplied(org, name, version) => s"$org % $name % $version"
-        case ScalaVersionDerived (org, name, version) => s"$org %% $name % $version"
+        case ScalaVersionSupplied(org, name, version, _) => s"$org % $name % $version"
+        case ScalaVersionDerived (org, name, version, _) => s"$org %% $name % $version"
       }
 
     val text = lines.zipWithIndex.map { case (l, i) => s"[${i+1}] $l" }.mkString(escapedNewline)

@@ -30,22 +30,37 @@ trait DabbleProps {
      version      <- genVersion
   } yield  Seq(org, "%", s"${name}_${scalaVersion}", "%", version)
 
+  private [dabble] def getConfigurationString: Gen[String] = Gen.oneOf("compile", "test", "default")
+
+  private [dabble] def genScalaVersionSuppliedWithConfiguration: Gen[Seq[String]] = for {
+     dep    <- genScalaVersionSupplied
+     config <- getConfigurationString
+  } yield  dep ++ Seq("%", config)
+
   private [dabble] def genScalaVersionDerived: Gen[Seq[String]] = for {
      org          <- genOrg
      name         <- genShortStrings
      version      <- genVersion
   } yield  Seq(org, "%%", s"${name}", "%", version)
 
-  private [dabble] def genDependency: Gen[Seq[String]] = for {
-    dep <- Gen.oneOf(genScalaVersionSupplied, genScalaVersionDerived)
-  } yield dep
+  private [dabble] def genScalaVersionDerivedWithConfiguration: Gen[Seq[String]] = for {
+     dep    <- genScalaVersionDerived
+     config <- getConfigurationString
+  } yield  dep ++ Seq("%", config)
+
+  private [dabble] def genDependency: Gen[Seq[String]] =
+    Gen.oneOf(genScalaVersionSupplied,
+              genScalaVersionDerived,
+              genScalaVersionSuppliedWithConfiguration,
+              genScalaVersionDerivedWithConfiguration)
 
   private [dabble] def genDependencyList: Gen[Seq[String]] =
     (for {
       length <- Gen.choose(2, 10)
-      deps   <- Gen.listOfN(length, Gen.oneOf(genScalaVersionDerived, genScalaVersionSupplied))
+      deps   <- Gen.listOfN(length, genDependency)
     } yield deps).map(dl => intersperse(dl, Seq("+")).flatten)
 
+  //Using Option.get is ugly. We expect these instances to be valid and fail otherwise.
   private [dabble] def genDependencies: Gen[Seq[Dependency]] =
     genDependencyList.map(d => DependencyParser.parse(d).toOption.get)
 
@@ -59,8 +74,8 @@ trait DabbleProps {
   private[dabble] implicit val dependencyShrink: Shrink[Seq[Dependency]] = Shrink[Seq[Dependency]] {
     case Seq() => Stream.empty
     case Seq(one) => Stream.empty
-    case Seq(one, two, _*) => Stream(Seq(one))
-    case Seq(one, two, three, _*) => Stream(Seq(one, two))
+    case Seq(one, two, _*) => Stream(Seq(one), Seq(two))
+    case Seq(one, two, three, _*) => Stream(Seq(one), Seq(two), Seq(three), Seq(one, two), Seq(one, three), Seq(two, three))
   }
 }
 

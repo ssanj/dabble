@@ -22,7 +22,7 @@ trait DependencyPrinter {
    * @param deps The Seq[Dependency] to make into a String
    * @return the dependency String.
    */
-  def print(deps: Seq[Dependency]): String = {
+  def printLibraryDependency(deps: Seq[Dependency]): String = {
     val newline = System.getProperty("line.separator")
     val tab = "  "
 

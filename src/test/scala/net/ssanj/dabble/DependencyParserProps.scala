@@ -12,8 +12,14 @@ object DependencyParserProps extends Properties("DependencyParser") with DabbleP
   Prop.forAll(genDependency) { inputs: Seq[String] =>
       val \/-(Seq(dep)) = DependencyParser.parse(inputs)
       dep match {
-        case ScalaVersionSupplied(org, name, version) => Seq(org, "%" , name, "%", version) == inputs
-        case ScalaVersionDerived (org, name, version) => Seq(org, "%%", name, "%", version) == inputs
+        case ScalaVersionSupplied(org, name, version, None) =>
+          Seq(org, "%" , name, "%", version) == inputs
+        case ScalaVersionSupplied(org, name, version, Some(config)) =>
+          Seq(org, "%" , name, "%", version, "%", config) == inputs
+        case ScalaVersionDerived (org, name, version, None) =>
+          Seq(org, "%%", name, "%", version) == inputs
+        case ScalaVersionDerived (org, name, version, Some(config)) =>
+          Seq(org, "%%", name, "%", version, "%", config) == inputs
       }
   }
 
@@ -21,8 +27,14 @@ property("returns a valid list of dependencies from a valid list of inputs")=
   Prop.forAll(genDependencyList) { inputs: Seq[String] =>
     val \/-(deps) = DependencyParser.parse(inputs)
     val outputs = intersperse(deps.map {
-      case ScalaVersionSupplied(org, name, version) => Seq(org, "%" , name, "%", version)
-      case ScalaVersionDerived (org, name, version) => Seq(org, "%%", name, "%", version)
+      case ScalaVersionSupplied(org, name, version, None) =>
+        Seq(org, "%" , name, "%", version)
+      case ScalaVersionSupplied(org, name, version, Some(config)) =>
+        Seq(org, "%" , name, "%", version, "%", config)
+      case ScalaVersionDerived (org, name, version, None) =>
+        Seq(org, "%%", name, "%", version)
+      case ScalaVersionDerived (org, name, version, Some(config)) =>
+        Seq(org, "%%", name, "%", version, "%", config)
     }.toList, Seq("+")).flatten
 
     inputs == outputs

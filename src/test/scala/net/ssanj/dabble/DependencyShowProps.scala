@@ -11,9 +11,9 @@ object DependencyShowProps extends Properties("Show instance for Dependency") wi
 
   property("show instances of Dependency") =
     Prop.forAll(genDependency) { inputs: Seq[String] =>
-
         val \/-(Seq(dep))     = DependencyParser.parse(inputs)
-        val output: String    = inputs.map(i => if (!i.startsWith("%")) s""""$i"""" else i).mkString(" ")
+        //we take(5) here because Dependencies don't store configuration (which would be upto 7 Strings)
+        val output: String    = inputs.take(5).map(i => if (!i.startsWith("%")) s""""$i"""" else i).mkString(" ")
         val genOutput: String = Show[Dependency].shows(dep)
         genOutput == output
     }
