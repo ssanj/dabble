@@ -41,7 +41,7 @@ trait DependencyParser  {
    * @param inputs The inputs representing dependencies.
    * @return A -\/ with an error  or a \/- with a Seq[Dependency].
    */
-  def parse(inputs: Seq[String]): String \/ Seq[Dependency] = {
+  def parseDependencies(inputs: Seq[String]): String \/ Seq[Dependency] = {
     if (inputs.isEmpty) s"unable to derive dependencies from: $inputs".left
     else parse(inputs, Seq.empty[Dependency])
   }

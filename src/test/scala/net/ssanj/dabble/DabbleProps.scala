@@ -60,16 +60,15 @@ trait DabbleProps {
       deps   <- Gen.listOfN(length, genDependency)
     } yield deps).map(dl => intersperse(dl, Seq("+")).flatten)
 
-  //Using Option.get is ugly. We expect these instances to be valid and fail otherwise.
   private [dabble] def genDependencies: Gen[Seq[Dependency]] =
-    genDependencyList.map(d => DependencyParser.parse(d).toOption.get)
+    genDependencyList.map(d => DependencyParser.parseDependencies(d).fold(failGen[Seq[Dependency]], identity))
 
   private [dabble] def emptyInput: Gen[Seq[String]] = for {
     length <- Gen.choose(0, 10)
     deps   <- Gen.const(List.fill(length)(" "))
   } yield deps
 
-  private[dabble] def labeled(actual: String, expected: String): String = s"expected:${newline}${expected}${newline}got:${newline}$actual"
+  private[dabble] def labeled(actual: String, expected: String): String = s"expected:${newline}${tab}${expected}${newline}got:${newline}${tab}$actual"
 
   private[dabble] implicit val dependencyShrink: Shrink[Seq[Dependency]] = Shrink[Seq[Dependency]] {
     case Seq() => Stream.empty
@@ -77,5 +76,88 @@ trait DabbleProps {
     case Seq(one, two, _*) => Stream(Seq(one), Seq(two))
     case Seq(one, two, three, _*) => Stream(Seq(one), Seq(two), Seq(three), Seq(one, two), Seq(one, three), Seq(two, three))
   }
+
+  private[dabble] def genReleaseAndSnapshotsResolverString: Gen[String] = for {
+    repo  <- Gen.oneOf("sonatype", "typesafe", "typesafeIvy", "sbtPlugin")
+    rtype <- Gen.oneOf(":s", ":r", "")
+  } yield (s"${repo}${rtype}")
+
+  private[dabble] def genDirectoryResolverString: Gen[String] = Gen.oneOf("maven2", "jcenter")
+
+  private[dabble] def genDomainString: Gen[String] = for {
+    tld        <- Gen.oneOf(".com", ".net", ".com.au", ".net.au")
+    domain     <- genShortStrings
+    cname      <- Gen.oneOf("", "www.")
+    } yield s"${cname}${domain}${tld}"
+
+  private[dabble] def genBintrayResolverString: Gen[String] = for {
+    owner <- genShortStrings
+    repo  <- genShortStrings
+  } yield s"bintray:$owner:$repo"
+
+  private[dabble] def genSpaces(n: Int): Gen[String] = for {
+    no <- Gen.choose(1, n)
+    spaces <- Gen.listOfN(no, Gen.const(" "))
+  } yield spaces.mkString
+
+  private[dabble] def emptyStringOrSpaces(n: Int): Gen[String] = for {
+    spaces <- Gen.oneOf(emptyString, genSpaces(n))
+  } yield spaces
+
+  private[dabble] def emptyString: Gen[String] = Gen.const("")
+
+  private[dabble] def genSpaceSeparatedName: Gen[String] = for {
+    length <- Gen.choose(1, 4)
+    names <- Gen.listOfN(length, genShortStrings)
+  } yield names.mkString(" ")
+
+  private[dabble] def genCustomResolverString: Gen[String] = for {
+    name       <- genSpaceSeparatedName
+    nbSpaces   <- emptyStringOrSpaces(3) //space before the name
+    naSpaces   <- emptyStringOrSpaces(3) //space after the name
+    protocol   <- Gen.oneOf("http", "https")
+    ubSpaces   <- emptyStringOrSpaces(3) //space before url
+    uaSpaces   <- emptyStringOrSpaces(3) //space after url
+    pathLength <- Gen.choose(3, 10)
+    path       <- Gen.listOfN(pathLength, genShortStrings)
+    domain     <- genDomainString
+  } yield s"${nbSpaces}${name}${naSpaces}@${ubSpaces}$protocol://${domain}/${path.mkString("/")}${uaSpaces}"
+
+  private[dabble] def genResolverString: Gen[String] =
+    Gen.oneOf(genReleaseAndSnapshotsResolverString,
+              genDirectoryResolverString,
+              genBintrayResolverString,
+              genCustomResolverString)
+
+  private [dabble] def genResolverStringList: Gen[Seq[String]] =
+    (for {
+      length   <- Gen.choose(1, 3)
+      resolver <- Gen.listOfN(length, genResolverString)
+    } yield resolver)
+
+  private [dabble] def genResolver: Gen[Resolver] =
+    genResolverString.map(r => ResolverParser.parseResolvers(Seq(r)).
+      fold(failGen,
+           rr => if (rr.nonEmpty) rr.head
+                 else failGen[Resolver](s"parsing $r resulted in an empty resolver list")))
+
+  private [dabble] def genResolvers: Gen[Seq[Resolver]] =
+    genResolverStringList.map(r => ResolverParser.parseResolvers(r).fold(failGen[Seq[Resolver]], identity))
+
+  private[dabble] implicit val resolverShrink: Shrink[Seq[Resolver]] = Shrink[Seq[Resolver]] {
+    case Seq() => Stream.empty
+    case Seq(one) => Stream.empty
+    case Seq(one, two, _*) => Stream(Seq(one), Seq(two))
+    case Seq(one, two, three, _*) => Stream(Seq(one), Seq(two), Seq(three), Seq(one, two), Seq(one, three), Seq(two, three))
+  }
+
+  //TODO: Can we replace this with suchThat ??
+  private def failGen[A](error: String): A = throw new IllegalArgumentException(error)
+
+  private[dabble] def genReplCommand: Gen[(String, String)] =
+    Gen.oneOf(
+              ("""println("test")""", s"""println(\\\"test\\\")"""),
+              (s"""println("${newline}1${newline}2{$tab}3")""", s"""println(\\\"${escapedNewline}1${escapedNewline}2{$escapedTab}3\\\")""")
+             )
 }
 

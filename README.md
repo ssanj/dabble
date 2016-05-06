@@ -11,6 +11,10 @@ Let Dabble handle the details for you. Simply run __dabble__ with the libraries 
 1. Easy copy-paste of sbt dependencies onto dabble to get something working quickly.
 2. Use SBT to do the heavy lifting.
 
+## Requirements
+
+SBT 0.13.x
+
 ## Build
 
 ### On Linux or Macosx build the __dabble__ executable with:
@@ -28,7 +32,7 @@ chmod +x ~/bin/dabble
 You can run dabble as:
 
 ```
-dabble "com.chuusai" %% "shapeless" % "2.3.0"
+dabble <dependencies>
 ```
 
 ### On Windows build dabble.jar with:
@@ -40,7 +44,7 @@ sbt assembly
 Once that completes, you can run dabble as:
 
 ```
-java -jar dabble.jar "com.chuusai" %% "shapeless" % "2.3.0"
+java -jar dabble.jar <dependencies>
 ```
 
 ## Configuration
@@ -50,7 +54,7 @@ Dabble operates out of the ~/.dabble directory. When you run dabble, a minimal b
 You can get a full list of arguments to dabble by running it with -h or --help:
 
 ```
-Dabble version: 0.0.1-b450
+Dabble version: 0.0.2-b837
 Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
 
   -h | --help
@@ -58,35 +62,76 @@ Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
   -v | --version
 
   <dep1> + <dep2> + ... <depn>
-        Format:
+        Format is one of:
     "org1" %  "name1" % "version1"
     "org2" %% "name2" % "version2"
     "org3" %% "name3" % "version3 % "config""
     "org1" %% "name1" % "version1" + "org2" %% "name2" % "version2"
+
+  -r "<res1>,<res2>, .... <resn>" | --resolvers "<res1>,<res2>, .... <resn>"
+    Format is one of:
+    (sonatype|typesafe|typesafeIvy|sbtPlugin):[s|r]
+    (maven2|jcenter)
+    bintray(owner:repo)
+    name@repo_url
+
+    Example:
+    sonatype:s -- loads only snapshot repo
+    sonatype:r -- loads only release repo
+    sonatype   -- loads both snapshot and release repos
+    maven2     -- loads the maven2 resolver
+    bintray:user:repo  -- loads the bintray resolver for user/repo
+    your repo name @ https://your.repo.com/release/maven -- loads a custom resolver
 ```
 
 ## Running
 
 ```
-dabble <dependencies>
+dabble <dependencies> <resolvers>
 ```
 
-Single dependency:
+With a single dependency:
 
 ```
 dabble "org.scalaz" %% "scalaz-core" % "7.2.2"
 ```
 
-Single test dependency:
+With a single dependency and config:
 
 ```
 dabble "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 ```
 
-Multiple dependencies:
+With multiple dependencies separated by a __+__ sign:
 
 ```
 dabble "org.scalaz" %% "scalaz-core" % "7.2.2" + "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+```
+
+With a single resolver specified by __-r__:
+
+```
+dabble -r "Oncue Bintray Repo @ http://dl.bintray.com/oncue/releases" "oncue.knobs" %% "core" % "3.6.1"
+```
+
+or
+
+```
+dabble "oncue.knobs" %% "core" % "3.6.1" -r "Oncue Bintray Repo @ http://dl.bintray.com/oncue/releases"
+```
+
+_Resolvers can be specified before or after the dependencies._
+
+With multiple resolvers separated by a __,__:
+
+```
+dabble -r "bintray:bmjames:maven, sonatype" "net.bmjames" %% "scala-optparse-applicative" % "0.3"
+```
+
+or
+
+```
+dabble "net.bmjames" %% "scala-optparse-applicative" % "0.3" -r "bintray:bmjames:maven, sonatype"
 ```
 
 ## Output

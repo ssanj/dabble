@@ -13,7 +13,7 @@ final class DependencyParserSpec extends Matchers with WordSpecLike with Appende
         val input3 = Seq("net.databinder.dispatch", "%", "dispatch-core_2.11", "%", "0.11.2", "+")
         val input  = Seq(input1, input2, input3).flatten
 
-        val \/-(dependencies) = DependencyParser.parse(input)
+        val \/-(dependencies) = DependencyParser.parseDependencies(input)
 
         dependencies should have size (3)
         dependencies(0) should be (ScalaVersionSupplied("org.scalaz", "scalaz-core_2.11", "7.1.4"))
@@ -34,7 +34,7 @@ final class DependencyParserSpec extends Matchers with WordSpecLike with Appende
         val input  = Seq(input1, input2, input3, input4, input5, input6, input7)
 
         input.foreach { i =>
-          DependencyParser.parse(i).isLeft should be (true) withClue(s"Expected parser error for: $i")
+          DependencyParser.parseDependencies(i).isLeft should be (true) withClue(s"Expected parser error for: $i")
         }
       }
     }

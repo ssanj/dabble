@@ -2,7 +2,7 @@ name := "Dabble"
 
 organization := "net.ssanj"
 
-version := "0.0.1"
+version := "0.0.2"
 
 scalaVersion := "2.11.8"
 
@@ -25,7 +25,9 @@ scalacOptions ++= Seq(
                       // "-Ywarn-unused-import",
                       "-Ywarn-infer-any",
                       "-Ywarn-nullary-override",
-                      "-Ywarn-nullary-unit"
+                      "-Ywarn-nullary-unit",
+                      "-Ypatmat-exhaust-depth",
+                      "40"
                      )
 
 

@@ -10,7 +10,7 @@ object DependencyParserProps extends Properties("DependencyParser") with DabbleP
 
  property("returns a valid dependency from a valid input") =
   Prop.forAll(genDependency) { inputs: Seq[String] =>
-      val \/-(Seq(dep)) = DependencyParser.parse(inputs)
+      val \/-(Seq(dep)) = DependencyParser.parseDependencies(inputs)
       dep match {
         case ScalaVersionSupplied(org, name, version, None) =>
           Seq(org, "%" , name, "%", version) == inputs
@@ -25,7 +25,7 @@ object DependencyParserProps extends Properties("DependencyParser") with DabbleP
 
 property("returns a valid list of dependencies from a valid list of inputs")=
   Prop.forAll(genDependencyList) { inputs: Seq[String] =>
-    val \/-(deps) = DependencyParser.parse(inputs)
+    val \/-(deps) = DependencyParser.parseDependencies(inputs)
     val outputs = intersperse(deps.map {
       case ScalaVersionSupplied(org, name, version, None) =>
         Seq(org, "%" , name, "%", version)
@@ -42,7 +42,7 @@ property("returns a valid list of dependencies from a valid list of inputs")=
 
 property("returns an empty list of dependencies if the input is invalid") =
   Prop.forAll(emptyInput) { inputs: Seq[String] =>
-    val -\/(error) = DependencyParser.parse(inputs)
+    val -\/(error) = DependencyParser.parseDependencies(inputs)
     error == s"unable to derive dependencies from: $inputs"
   }
 }

@@ -1,0 +1,105 @@
+
+Features
+--------
+
+[] -t *default* | actual name(minus sbt) (looks in templates fold) | fullpath
+
+[] templates (templates dir)
+
+[] How can we compose partial functions?
+
+[] Colours in the terminal?
+
+[] tests around commandline handling
+
+[] Restructure app
+
+[] write wrapper to output sbt initial commands
+
+[] can we optionally generate steps of a generator?
+
+[] support specifying repositories:
+
+[] -r "bmjames Bintray Repo" at "https://dl.bintray.com/bmjames/maven" + "bmjames Bintray Repo" at "https://dl.bintray.com/bmjames/maven" + "bmjames Bintray Repo" at "https://dl.bintray.com/bmjames/maven"
+
+--------------------------
+
+org.scalaz %% scalaz-core % 7.1.4
+org.scalaz %% scalaz-core % 7.2.0
+org.scalaz %% scalaz-core % 7.2.2
+com.chiusi %% shapeless % 3.1.4
+
+
+
+----
+
+
+dabble -hi scalaz
+
+Found:
+
+[1] org.scalaz %% scalaz-core % 7.1.4
+[2] org.scalaz %% scalaz-core % 7.2.0
+[3] org.scalaz %% scalaz-core % 7.2.2
+[4] exit
+
+Which one would you like?
+
+3
+
+call dabble with org.scalaz %% scalaz-core % 7.2.2
+
+
+----
+
+
+dabble -hi scalaz + shapeless
+
+Found:
+
+[1] org.scalaz %% scalaz-core % 7.1.4
+[2] org.scalaz %% scalaz-core % 7.2.0
+[3] org.scalaz %% scalaz-core % 7.2.2
+[4] com.chiusi %% shapeless % 3.1.4
+[5] exit
+
+3,4
+
+call dabble with: org.scalaz %% scalaz-core % 7.2.2 + com.chiusi %% shapeless % 3.1.4
+
+---
+
+dabble -hi scalaz + blah
+
+Found:
+
+[1] org.scalaz %% scalaz-core % 7.1.4
+[2] org.scalaz %% scalaz-core % 7.2.0
+[3] org.scalaz %% scalaz-core % 7.2.2
+[4] exit
+
+---
+
+syntax for resolvers
+
+sonatypeRepo => Resolver.sonatypeRepo("public")
+typesafe ("releases", "snapshot")
+
+Resolver.bintrayRepo("owner", "repo")
+"Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+typesafeIvyRepo
+
+default
+sonatype:r|s
+typesafe:r|s
+typesafeIvy:r|s
+bintray:user:repo
+Sonatype OSS Snapshots @ https://oss.sonatype.org/content/repositories/snapshots
+
+-r "typesafe, bintray:blee:gee, sonatype:r"
+
+
+Questions
+---------
+
+[] can we optionally generate steps of a generator? (Eg. Use frequency on generating configuration)
