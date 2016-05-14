@@ -54,7 +54,7 @@ Dabble operates out of the ~/.dabble directory. When you run dabble, a minimal b
 You can get a full list of arguments to dabble by running it with -h or --help:
 
 ```
-Dabble version: 0.0.2-b837
+Dabble version: 0.0.3-b892
 Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
 
   -h | --help
@@ -62,26 +62,43 @@ Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
   -v | --version
 
   <dep1> + <dep2> + ... <depn>
-        Format is one of:
-    "org1" %  "name1" % "version1"
-    "org2" %% "name2" % "version2"
-    "org3" %% "name3" % "version3 % "config""
-    "org1" %% "name1" % "version1" + "org2" %% "name2" % "version2"
+  The list of dependencies to include.
+  Multiple dependencies should be separated by a + sign.
+
+  Format is one of:
+  "org1" %  "name1" % "version1"
+  "org2" %% "name2" % "version2"
+  "org3" %% "name3" % "version3 % "config""
+  "org1" %% "name1" % "version1" + "org2" %% "name2" % "version2"
+
+  Example:
+  "com.github.scopt" %% "scopt" % "3.4.0" + "org.scalaz" %% "scalaz-core" % "7.2.2"
 
   -r "<res1>,<res2>, .... <resn>" | --resolvers "<res1>,<res2>, .... <resn>"
-    Format is one of:
-    (sonatype|typesafe|typesafeIvy|sbtPlugin):[s|r]
-    (maven2|jcenter)
-    bintray(owner:repo)
-    name@repo_url
+  The list of additional repositories to resolve dependencies from.
+  Multiple dependencies should be separated by commas.
 
-    Example:
-    sonatype:s -- loads only snapshot repo
-    sonatype:r -- loads only release repo
-    sonatype   -- loads both snapshot and release repos
-    maven2     -- loads the maven2 resolver
-    bintray:user:repo  -- loads the bintray resolver for user/repo
-    your repo name @ https://your.repo.com/release/maven -- loads a custom resolver
+  Format is one of:
+  (sonatype|typesafe|typesafeIvy|sbtPlugin):[s|r]
+  (maven2|jcenter)
+  bintray(owner:repo)
+  name@repo_url
+
+  sonatype:s -- loads only snapshot repo
+  sonatype:r -- loads only release repo
+  sonatype   -- loads both snapshot and release repos
+  maven2     -- loads the maven2 resolver
+  bintray:user:repo  -- loads the bintray resolver for user/repo
+  your repo name @ https://your.repo.com/release/maven -- loads a custom resolver
+
+  Example:
+  "bintray:oncue:releases, sonatype:r"
+
+  -mp <version> | --macro-paradise <version>
+  Includes the macro paradise compiler plugin with the supplied version.
+
+  Example:
+  2.1.0
 ```
 
 ## Running
@@ -132,6 +149,12 @@ or
 
 ```
 dabble "net.bmjames" %% "scala-optparse-applicative" % "0.3" -r "bintray:bmjames:maven, sonatype"
+```
+
+With a specific version of the [macro paradise](http://docs.scala-lang.org/overviews/macros/paradise.html) compiler plugin:
+
+```
+dabble "com.github.mpilquist" %% "simulacrum" % "0.7.0" -mp "2.1.0"
 ```
 
 ## Output

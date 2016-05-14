@@ -29,17 +29,19 @@ trait Executor { self: DefaultTemplate with DabblePrinter =>
 
   protected val processingFailed: ExecutionResult = ExecutionResult(None, 1)
 
-  protected def build(dependencies: Seq[Dependency], resolvers: Seq[Resolver]): ExecutionResult = {
+  protected def build(dependencies: Seq[Dependency], resolvers: Seq[Resolver], mpVersion: Option[String]): ExecutionResult = {
     Try {
       log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
-      genBuildFileFrom(dabbleHome, dependencies, resolvers)
+      genBuildFileFrom(dabbleHome, dependencies, resolvers, mpVersion)
 
       val result = %(getSBTExec, "console-quick")(dabbleHome.work.path)
       ExecutionResult(if (result == 0) Option("Dabble completed successfully.") else Option("Could not launch console. See SBT output for details."), result)
     }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
   }
 
-  protected def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver]): Unit = {
+  protected def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver],
+    mpVersion: Option[String]): Unit = {
+
     val defaultSbtTemplate   = home.path/defaultBuildFile
     val outputSBTFile        = home.work.path/defaultBuildFile
     val sbtTemplateContent   =
@@ -51,28 +53,40 @@ trait Executor { self: DefaultTemplate with DabblePrinter =>
         inMemSbtTemplate
       }
 
-    val initialCommands     = getInitialCommands(dependencies, resolvers)
+    val initialCommands     = getInitialCommands(dependencies, resolvers, mpVersion)
     val sbtDependencyString = printLibraryDependency(dependencies)
     val sbtResolverString   = printResolvers(resolvers)
 
     val formattedSbtTemplateContent  = sbtTemplateContent + newlines(2)
     val formattedSbtDependencyString = sbtDependencyString + newlines(2)
     val formattedResolverString      = (if (resolvers.nonEmpty) (sbtResolverString + newlines(2)) else "")
+    val formattedMacroParadise       = mpVersion.map(printMacroParadise).fold("")(_ + newlines(2))
 
     write.over (outputSBTFile,
                 formattedSbtTemplateContent  +
                 formattedResolverString      +
                 formattedSbtDependencyString +
+                formattedMacroParadise    +
                 initialCommands)
   }
 
-  private def getInitialCommands(dependencies: Seq[Dependency], resolvers: Seq[Resolver]): String = {
+  private def getInitialCommands(dependencies: Seq[Dependency], resolvers: Seq[Resolver],
+    mpVersion: Option[String]): String = {
     val dependencyText = printLibraryDependenciesText(dependencies)
     val resolverText   = printResolversAsText(resolvers)
 
-    val depString      = s"Dabble injected the following libraries:${newline}${dependencyText}${newline}"
-    val resolverString = s"Dabble injected the following resolvers:${newline}${resolverText}${newline}"
-    val injections     = newline + depString + (if (resolvers.nonEmpty) newline + resolverString else "")
+    val depString      = s"${newline}Dabble injected the following libraries:" +
+                          s"${newline}${dependencyText}${newline}"
+    val resolverString = if (resolvers.nonEmpty) {
+                          s"${newline}Dabble injected the following resolvers:" +
+                            s"${newline}${resolverText}${newline}"
+                         } else ""
+    val cpString       = mpVersion.fold("")(v => s"${newline}Dabble injected macro paradise version:" +
+                                                   s" ${v}${newline}")
+    val injections     = depString      +
+                         resolverString +
+                         cpString
+
     val replString     = s"""println("${injections}")"""
 
     s"""initialCommands := "${replEscaped(replString)}""""

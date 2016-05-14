@@ -33,7 +33,7 @@ object DabblePrinterProps             extends
           dependencyLines.map(s"$tabAsSpaces" + _).mkString("," + newline) +
           s"${newline})"
 
-        (dependencyString == output) :| labeled(output, dependencyString)
+        (output == dependencyString) :| labeled(output, dependencyString)
     }
 
  property("prints text representation of dependencies") =
@@ -47,7 +47,7 @@ object DabblePrinterProps             extends
       }
 
     val text = lines.zipWithIndex.map { case (l, i) => s"[${i+1}] $l" }.mkString(newline)
-    (text == output) :| labeled(text, output)
+    (output == text) :| labeled(output, text)
   }
 
   property("prints valid resolvers") =
@@ -59,7 +59,7 @@ object DabblePrinterProps             extends
          resolvers.map(r => tabAsSpaces + Show[Resolver].shows(r)).mkString("," + newline) +
         s"${newline})"
 
-     (resolverString == output) :| labeled(output, resolverString)
+     (output == resolverString) :| labeled(output, resolverString)
     }
 
  property("print text representation of resolvers") =
@@ -67,10 +67,10 @@ object DabblePrinterProps             extends
     val \/-(resolvers) = ResolverParser.parseResolvers(resolverStrings)
     val output = printResolversAsText(resolvers)
     //remove all extraneous spaces in custom repos between name and url.
-    val fixed = resolverStrings.map(r => if (r.contains("@")) r.split("@").map(_.trim).mkString("@") else r)
+    val fixed    = resolverStrings.map(r => if (r.contains("@")) r.split("@").map(_.trim).mkString("@") else r)
     val expected = fixed.zipWithIndex.map { case (r, i) => s"[${i+1}] $r" }.mkString(newline)
 
-    (expected == output) :| labeled(output, expected)
+    (output == expected) :| labeled(output, expected)
    }
 
  property("print repl-escaped content") =
@@ -78,5 +78,15 @@ object DabblePrinterProps             extends
     case (input: String, res: String) =>
       val output = replEscaped(input)
       (output == res) :| labeled(output.toArray.mkString(","), res.toArray.mkString(","))
+   }
+
+ property("print macro paradise dependency") =
+   Prop.forAllNoShrink(genLibraryVersion) { version =>
+    val output   = printMacroParadise(version)
+    val expected = s"""addCompilerPlugin("org.scalamacros" % "paradise" % """" +
+                       version +
+                       """" cross CrossVersion.full)"""
+
+    (output == expected) :| labeled(output, expected)
    }
 }

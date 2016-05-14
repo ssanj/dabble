@@ -110,4 +110,8 @@ trait DabblePrinter {
                                                  replace("\r", "\\\\r").
                                                  replace("\t", "\\\\t").
                                                  replace("\"", "\\\"")
+
+  def printMacroParadise(version: String): String =
+    s"""addCompilerPlugin("org.scalamacros" % "paradise" % "${version}" cross CrossVersion.full)"""
+
 }

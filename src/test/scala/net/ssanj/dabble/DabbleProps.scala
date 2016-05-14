@@ -141,7 +141,7 @@ trait DabbleProps {
            rr => if (rr.nonEmpty) rr.head
                  else failGen[Resolver](s"parsing $r resulted in an empty resolver list")))
 
-  private [dabble] def genResolvers: Gen[Seq[Resolver]] =
+  private[dabble] def genResolvers: Gen[Seq[Resolver]] =
     genResolverStringList.map(r => ResolverParser.parseResolvers(r).fold(failGen[Seq[Resolver]], identity))
 
   private[dabble] implicit val resolverShrink: Shrink[Seq[Resolver]] = Shrink[Seq[Resolver]] {
@@ -159,5 +159,11 @@ trait DabbleProps {
               ("""println("test")""", s"""println(\\\"test\\\")"""),
               (s"""println("${newline}1${newline}2{$tab}3")""", s"""println(\\\"${escapedNewline}1${escapedNewline}2{$escapedTab}3\\\")""")
              )
+
+ private[dabble] def genLibraryVersion: Gen[String] = for {
+    major <- Gen.choose(1, 10)
+    minor <- Gen.choose(1, 10)
+    patch <- Gen.choose(1, 30)
+ } yield s"${major}.${minor}.${patch}"
 }
 
