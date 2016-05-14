@@ -14,13 +14,8 @@ Features
 
 [] Restructure app
 
-[] write wrapper to output sbt initial commands
-
 [] can we optionally generate steps of a generator?
 
-[] support specifying repositories:
-
-[] -r "bmjames Bintray Repo" at "https://dl.bintray.com/bmjames/maven" + "bmjames Bintray Repo" at "https://dl.bintray.com/bmjames/maven" + "bmjames Bintray Repo" at "https://dl.bintray.com/bmjames/maven"
 
 --------------------------
 
@@ -28,8 +23,6 @@ org.scalaz %% scalaz-core % 7.1.4
 org.scalaz %% scalaz-core % 7.2.0
 org.scalaz %% scalaz-core % 7.2.2
 com.chiusi %% shapeless % 3.1.4
-
-
 
 ----
 
@@ -48,7 +41,6 @@ Which one would you like?
 3
 
 call dabble with org.scalaz %% scalaz-core % 7.2.2
-
 
 ----
 
@@ -77,29 +69,3 @@ Found:
 [2] org.scalaz %% scalaz-core % 7.2.0
 [3] org.scalaz %% scalaz-core % 7.2.2
 [4] exit
-
----
-
-syntax for resolvers
-
-sonatypeRepo => Resolver.sonatypeRepo("public")
-typesafe ("releases", "snapshot")
-
-Resolver.bintrayRepo("owner", "repo")
-"Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
-typesafeIvyRepo
-
-default
-sonatype:r|s
-typesafe:r|s
-typesafeIvy:r|s
-bintray:user:repo
-Sonatype OSS Snapshots @ https://oss.sonatype.org/content/repositories/snapshots
-
--r "typesafe, bintray:blee:gee, sonatype:r"
-
-
-Questions
----------
-
-[] can we optionally generate steps of a generator? (Eg. Use frequency on generating configuration)
