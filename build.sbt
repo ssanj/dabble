@@ -2,7 +2,7 @@ name := "Dabble"
 
 organization := "net.ssanj"
 
-version := "0.0.2"
+version := "0.0.3"
 
 scalaVersion := "2.11.8"
 
