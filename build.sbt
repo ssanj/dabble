@@ -29,21 +29,3 @@ scalacOptions ++= Seq(
                       "-Ypatmat-exhaust-depth",
                       "40"
                      )
-
-
-def isWindows() = System.getProperty("os.name").toLowerCase.startsWith("windows")
-
-assemblyJarName in assembly := {
-  val nameLower = name.value.toLowerCase
-  if (isWindows) s"${nameLower}.jar" else s"${nameLower}"
-}
-
-mainClass in assembly := Some("net.ssanj.dabble.DabbleApp")
-
-import sbtassembly.AssemblyPlugin.defaultShellScript
-
-assemblyOption in assembly := {
-  if (isWindows) (assemblyOption in assembly).value.copy(prependShellScript = None)
-  else (assemblyOption in assembly).value.copy(prependShellScript = Some(defaultShellScript))
-}
-
