@@ -15,13 +15,46 @@ Let Dabble handle the details for you. Simply run __dabble__ with the libraries 
 
 SBT 0.13.x
 
+## Download
+
+### Linux or Macosx
+
+To get a executable on Linux or Macosx run:
+
+```
+curl -L -o dabble https://git.io/vr8B3; chmod +x dabble; ./dabble -h
+```
+
+To get a jar file run:
+
+```
+curl -L -o dabble.jar https://git.io/vr8BH; java -jar dabble.jar -h
+```
+
+### Windows
+
+Down the [dabble.jar](https://git.io/vr8BH) file and run:
+
+```
+java -jar dabble.jar -h
+```
+
+Alternatively, also download the [dabble.bat](https://git.io/vr80p) file into the same directory and run it via:
+
+```
+dabble.bat -h
+```
+
 ## Build
 
-### On Linux or Macosx build the __dabble__ executable with:
+### Linux or Macosx
+
+Build the __dabble__ executable with:
 
 ```
 sbt assembly
 ```
+
 Once that completes, you can add dabble to your path and make it executable:
 
 ```
@@ -35,7 +68,9 @@ You can run dabble as:
 dabble <dependencies>
 ```
 
-### On Windows build dabble.jar with:
+### Windows
+
+Build dabble.jar with:
 
 ```
 sbt assembly
