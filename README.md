@@ -2,7 +2,7 @@
 
 # Dabble
 
-Ever wanted to play around with a new Scala library but wished there was an easier way to put it on the classpath of the Scala repl? Tired of manually copying lengthy file paths to specify the classpath?
+Ever wanted to play around with a new Scala library but wished there was an easier way to put it on the classpath of the REPL? Tired of manually copying lengthy file paths to specify the classpath?
 
 Let Dabble handle the details for you. Simply run __dabble__ with the libraries of your choosing, similar to how you would see it on its project page on Github or on maven central. Then sit back while dabble downloads any dependencies you need, adds it to the classpath of a Scala repl and launches you in.
 
@@ -15,6 +15,60 @@ Let Dabble handle the details for you. Simply run __dabble__ with the libraries 
 
 SBT 0.13.x
 
+## Example
+
+How can we use dabble to play around with the scalaz-core library in the REPL?
+
+Go to the [scalaz github page](https://github.com/scalaz/scalaz) to see what the latest dependency is:
+
+```
+libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.2.2"
+```
+
+Simply grab the part after the __+=__ sign and call dabble:
+
+```
+dabble "org.scalaz" %% "scalaz-core" % "7.2.2"
+```
+
+This results in the following output:
+
+```
+  _____        _     _     _
+ |  __ \      | |   | |   | |
+ | |  | | __ _| |__ | |__ | | ___
+ | |  | |/ _` | '_ \| '_ \| |/ _ \
+ | |__| | (_| | |_) | |_) | |  __/
+ |_____/ \__,_|_.__/|_.__/|_|\___|
+
+Dabble: 0.0.1-b325
+Dabble: Using default sbt template at: /Users/sanj/.dabble/build.sbt
+[info] Loading global plugins from /Users/sanj/.sbt/0.13/plugins
+[info] Set current project to Willow (in build file:/Users/sanj/.dabble/work/)
+[info] Starting scala interpreter...
+[info]
+
+Dabble injected the following libraries:
+[1] org.scalaz %% scalaz-core % 7.2.2
+
+Welcome to Scala version 2.11.7 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_65).
+Type in expressions to have them evaluated.
+Type :help for more information.
+```
+
+Now we can use scalaz as per usual:
+
+```
+scala> import scalaz._, syntax.either._
+import scalaz._
+import syntax.either._
+
+scala> 5.right[String]
+res1: scalaz.\/[String,Int] = \/-(5)
+
+scala>
+```
+
 ## Download
 
 ### Linux or Macosx
@@ -25,7 +79,7 @@ To get a executable on Linux or Macosx run:
 curl -L -o dabble https://git.io/vr8B3; chmod +x dabble; ./dabble -h
 ```
 
-To get a jar file run:
+To get a plain jar file run:
 
 ```
 curl -L -o dabble.jar https://git.io/vr8BH; java -jar dabble.jar -h
@@ -33,7 +87,7 @@ curl -L -o dabble.jar https://git.io/vr8BH; java -jar dabble.jar -h
 
 ### Windows
 
-Down the [dabble.jar](https://git.io/vr8BH) file and run:
+Download the [dabble.jar](https://git.io/vr8BH) file and run:
 
 ```
 java -jar dabble.jar -h
@@ -73,13 +127,75 @@ dabble <dependencies>
 Build dabble.jar with:
 
 ```
-sbt assembly
+sbt -Dplain.jar assembly
 ```
 
 Once that completes, you can run dabble as:
 
 ```
 java -jar dabble.jar <dependencies>
+```
+
+You can also download the sample [dabble.bat](https://git.io/vr80p) file and run it as:
+
+```
+dabble.bat <dependencies>
+```
+
+## Running
+
+```
+dabble <dependencies> <resolvers> <macro-paradise-version>
+```
+
+With a single dependency:
+
+```
+dabble "org.scalaz" %% "scalaz-core" % "7.2.2"
+```
+
+With a single dependency and config:
+
+```
+dabble "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+```
+
+With multiple dependencies separated by a __+__ sign:
+
+```
+dabble "org.scalaz" %% "scalaz-core" % "7.2.2" + "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+```
+
+With a single resolver specified by __-r__:
+
+```
+dabble -r "Oncue Bintray Repo @ http://dl.bintray.com/oncue/releases" "oncue.knobs" %% "core" % "3.6.1"
+```
+
+or
+
+```
+dabble "oncue.knobs" %% "core" % "3.6.1" -r "Oncue Bintray Repo @ http://dl.bintray.com/oncue/releases"
+```
+
+_Resolvers can be specified before or after the dependencies._
+
+With multiple resolvers separated by a __,__:
+
+```
+dabble -r "bintray:bmjames:maven, sonatype" "net.bmjames" %% "scala-optparse-applicative" % "0.3"
+```
+
+or
+
+```
+dabble "net.bmjames" %% "scala-optparse-applicative" % "0.3" -r "bintray:bmjames:maven, sonatype"
+```
+
+With a specific version of the [macro paradise](http://docs.scala-lang.org/overviews/macros/paradise.html) compiler plugin:
+
+```
+dabble "com.github.mpilquist" %% "simulacrum" % "0.7.0" -mp "2.1.0"
 ```
 
 ## Configuration
@@ -134,98 +250,4 @@ Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
 
   Example:
   2.1.0
-```
-
-## Running
-
-```
-dabble <dependencies> <resolvers>
-```
-
-With a single dependency:
-
-```
-dabble "org.scalaz" %% "scalaz-core" % "7.2.2"
-```
-
-With a single dependency and config:
-
-```
-dabble "org.scalatest" %% "scalatest" % "2.2.6" % "test"
-```
-
-With multiple dependencies separated by a __+__ sign:
-
-```
-dabble "org.scalaz" %% "scalaz-core" % "7.2.2" + "org.scalatest" %% "scalatest" % "2.2.6" % "test"
-```
-
-With a single resolver specified by __-r__:
-
-```
-dabble -r "Oncue Bintray Repo @ http://dl.bintray.com/oncue/releases" "oncue.knobs" %% "core" % "3.6.1"
-```
-
-or
-
-```
-dabble "oncue.knobs" %% "core" % "3.6.1" -r "Oncue Bintray Repo @ http://dl.bintray.com/oncue/releases"
-```
-
-_Resolvers can be specified before or after the dependencies._
-
-With multiple resolvers separated by a __,__:
-
-```
-dabble -r "bintray:bmjames:maven, sonatype" "net.bmjames" %% "scala-optparse-applicative" % "0.3"
-```
-
-or
-
-```
-dabble "net.bmjames" %% "scala-optparse-applicative" % "0.3" -r "bintray:bmjames:maven, sonatype"
-```
-
-With a specific version of the [macro paradise](http://docs.scala-lang.org/overviews/macros/paradise.html) compiler plugin:
-
-```
-dabble "com.github.mpilquist" %% "simulacrum" % "0.7.0" -mp "2.1.0"
-```
-
-## Output
-
-Some sample output:
-
-```
-dabble "org.scalaz" %% "scalaz-core" % "7.2.2"
-
-  _____        _     _     _
- |  __ \      | |   | |   | |
- | |  | | __ _| |__ | |__ | | ___
- | |  | |/ _` | '_ \| '_ \| |/ _ \
- | |__| | (_| | |_) | |_) | |  __/
- |_____/ \__,_|_.__/|_.__/|_|\___|
-
-Dabble: 0.0.1-b325
-Dabble: Using default sbt template at: /Users/sanj/.dabble/build.sbt
-[info] Loading global plugins from /Users/sanj/.sbt/0.13/plugins
-[info] Set current project to Willow (in build file:/Users/sanj/.dabble/work/)
-[info] Starting scala interpreter...
-[info]
-
-Dabble injected the following libraries:
-[1] org.scalaz %% scalaz-core % 7.2.2
-
-Welcome to Scala version 2.11.7 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_65).
-Type in expressions to have them evaluated.
-Type :help for more information.
-
-scala> import scalaz._, syntax.either._
-import scalaz._
-import syntax.either._
-
-scala> 5.right[String]
-res1: scalaz.\/[String,Int] = \/-(5)
-
-scala>
 ```
