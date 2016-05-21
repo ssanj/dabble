@@ -7,6 +7,8 @@ object DabbleApp extends DependencyParser  with
                          DabblePrinter     with
                          DefaultTemplate   with
                          Executor          with
+                         DabblePaths       with
+                         DabbleHistory     with
                          Banner            with
                          TerminalSupport {
 
@@ -15,7 +17,7 @@ object DabbleApp extends DependencyParser  with
     parser.parse(args, DabbleRunConfig()) match {
       case Some(DabbleRunConfig(deps, res, mp)) =>
         getBanner.foreach(println)
-
+        //read history file here
         val result =
               (for {
                 d <- parseDependencies(deps)
@@ -24,6 +26,7 @@ object DabbleApp extends DependencyParser  with
                 //TODO: Create a DabbleConfig from DabbleRunConfig which has valid types.
               } yield (d, r, mp)).fold(processingFailed, (build _).tupled)
 
+        //if successful write history file here
         exit(result)
       case None =>
         exit(processingFailed)

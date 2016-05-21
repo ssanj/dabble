@@ -3,6 +3,8 @@ package net.ssanj.dabble
 import org.scalacheck.{Gen, Shrink}
 import org.scalacheck.Gen.{posNum, negNum}
 import scalaz._
+import scalaz.NonEmptyList
+import scalaz.NonEmptyList.nels
 import scalaz.std.list._
 
 trait DabbleProps {
@@ -143,6 +145,18 @@ trait DabbleProps {
 
   private[dabble] def genResolvers: Gen[Seq[Resolver]] =
     genResolverStringList.map(r => ResolverParser.parseResolvers(r).fold(failGen[Seq[Resolver]], identity))
+
+  private[dabble] def genResolversWithEmpty: Gen[Seq[Resolver]] =
+    Gen.oneOf(genResolvers, Gen.const(Seq.empty[Resolver]))
+
+  private[dabble] def genMacroParadise: Gen[Option[String]] =
+    Gen.oneOf(genLibraryVersion.map(Option(_)), Gen.const(None: Option[String]))
+
+  private[dabble] def genDabbleHistoryLine: Gen[DabbleHistoryLine] = for {
+    deps <- genDependencies.map(d => nels(d.head, d.tail:_*))
+    res  <- genResolversWithEmpty
+    mpv  <- genMacroParadise
+  } yield DabbleHistoryLine(deps, res, mpv)
 
   private[dabble] implicit val resolverShrink: Shrink[Seq[Resolver]] = Shrink[Seq[Resolver]] {
     case Seq() => Stream.empty

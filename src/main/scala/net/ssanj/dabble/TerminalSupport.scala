@@ -67,7 +67,7 @@ trait TerminalSupport {
     }
   }
 
-  val parser = new scopt.OptionParser[DabbleRunConfig]("Dabble") {
+  lazy val parser = new scopt.OptionParser[DabbleRunConfig]("Dabble") {
     head(s"$title")
     toggle("help", Option("h"))(_ => showUsage)(this)
     toggle("version", Option("v"))(_ => println(s"$title"))(this)
@@ -81,6 +81,13 @@ trait TerminalSupport {
         failure("Invalid format for dependencies. Please see accepted formats below.")
       else success
     }
+  }
+
+  //We turn off all checks, and documentation as we don't need them if this fails
+  lazy val historyParser = new scopt.OptionParser[DabbleRunConfig]("Dabble-History") {
+    dependencies(this)
+    resolvers(this)
+    macroParadise(this)
   }
 }
 

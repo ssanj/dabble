@@ -3,7 +3,8 @@ package net.ssanj.dabble
 import org.scalacheck.Properties
 import org.scalacheck.{Prop, Gen}
 import org.scalacheck.Prop.BooleanOperators
-import scalaz.{\/-, Show}
+import scalaz.{\/-, NonEmptyList, Show}
+import scalaz.NonEmptyList.nels
 import net.ssanj.dabble.Implicits._
 
 object DabblePrinterProps             extends
@@ -88,5 +89,25 @@ object DabblePrinterProps             extends
                        """" cross CrossVersion.full)"""
 
     (output == expected) :| labeled(output, expected)
+   }
+ property("print history line") =
+   Prop.forAll(genDabbleHistoryLine) {
+      case dhl@DabbleHistoryLine(deps: NonEmptyList[Dependency], res: Seq[Resolver], mpv: Option[String]) =>
+        val output = printHistoryLine(dhl)
+        val expectedDeps = deps.map(Show[Dependency].shows).list.toList.mkString(" + ")
+
+        val expectedResolvers =
+          if (res.isEmpty) ""
+          else {
+            val r =  res.map(r => Show[ResolverString].shows(ResolverString(r))).mkString(",")
+            s""" -r "${r}""""
+          }
+
+        val expectedMacroParadiseVesion =
+          mpv.map(v => s""" -mp "${v}"""").getOrElse("")
+
+        val expected = s"${expectedDeps}${expectedResolvers}${expectedMacroParadiseVesion}"
+
+        (output == expected) :| labeled(output.toArray.mkString(","), expected.toArray.mkString(","))
    }
 }

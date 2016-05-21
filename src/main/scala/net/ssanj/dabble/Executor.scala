@@ -3,22 +3,15 @@ package net.ssanj.dabble
 import scala.util.Try
 import ammonite.ops._
 import scalaz._
+import scalaz.NonEmptyList.nels
 import scalaz.syntax.std.`try`._
 
-trait Executor { self: DefaultTemplate with DabblePrinter =>
+trait Executor { self: DefaultTemplate with
+                       DabblePrinter   with
+                       DabblePaths     with
+                       DabbleHistory =>
 
-  val userHomePath = Path(userHome)
   protected case class ExecutionResult(message: Option[String], code: Int)
-
-  protected case class DabbleWork(path: Path)
-  protected case class DabbleTemplates(path: Path)
-
-  protected case class DabbleHome(path: Path) {
-    def work = DabbleWork(path/'work)
-    def templates = DabbleTemplates(path/'templates)
-  }
-
-  protected val dabbleHome = DabbleHome(userHomePath/".dabble")
 
   protected def exit(result: ExecutionResult): Unit = {
     result.message.foreach(m => log(m))
@@ -30,12 +23,18 @@ trait Executor { self: DefaultTemplate with DabblePrinter =>
   protected val processingFailed: ExecutionResult = ExecutionResult(None, 1)
 
   protected def build(dependencies: Seq[Dependency], resolvers: Seq[Resolver], mpVersion: Option[String]): ExecutionResult = {
+    val historyLines = readHistory()
     Try {
       log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
       genBuildFileFrom(dabbleHome, dependencies, resolvers, mpVersion)
 
       val result = %(getSBTExec, "console-quick")(dabbleHome.work.path)
-      ExecutionResult(if (result == 0) Option("Dabble completed successfully.") else Option("Could not launch console. See SBT output for details."), result)
+      ExecutionResult(if (result == 0) {
+        val dep: Dependency = ScalaVersionSupplied("", "", "")
+        val newHistoryLine = DabbleHistoryLine(nels(dep), Seq.empty, None)
+        write.over(dabbleWork.history , printHistoryLines(newHistoryLine +: historyLines))
+        Option("Dabble completed successfully.")
+      } else Option("Could not launch console. See SBT output for details."), result)
     }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
   }
 
@@ -66,7 +65,7 @@ trait Executor { self: DefaultTemplate with DabblePrinter =>
                 formattedSbtTemplateContent  +
                 formattedResolverString      +
                 formattedSbtDependencyString +
-                formattedMacroParadise    +
+                formattedMacroParadise       +
                 initialCommands)
   }
 

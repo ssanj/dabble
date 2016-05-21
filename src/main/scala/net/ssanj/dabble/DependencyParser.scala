@@ -34,6 +34,7 @@ final case class ScalaVersionDerived (org: String, name: String, version: String
  * }}}
  *
  */
+
 trait DependencyParser  {
 
   /**

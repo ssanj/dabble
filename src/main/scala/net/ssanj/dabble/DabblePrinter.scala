@@ -114,4 +114,35 @@ trait DabblePrinter {
   def printMacroParadise(version: String): String =
     s"""addCompilerPlugin("org.scalamacros" % "paradise" % "${version}" cross CrossVersion.full)"""
 
+
+  def printHistoryLines(lines: Seq[DabbleHistoryLine]): String =
+    lines.map(printHistoryLine).mkString(newline)
+
+  def printHistoryLine(line: DabbleHistoryLine): String = {
+    val depsString =
+      line.dependencies.map(Show[Dependency].shows).list.toList.mkString(" + ")
+
+    //TODO: pull out these attrib names into constants
+    val resOp =
+      if (line.resolvers.isEmpty) None
+      else Option(line.resolvers.
+                    map(r => Show[ResolverString].shows(ResolverString(r))).
+                    mkString(","))
+
+    val mpvOp = line.mpVersion.map(v => s"$v")
+
+    Seq(Option(depsString),
+        resOp.map(r => s"""-r "${r}""""),
+        mpvOp.map(v => s"""-mp "${v}"""")).
+      flatten.
+      mkString(" ")
+  }
+
+    // val newHistory = (resolvers, mpVersion) match {
+  //   case (Seq(), None) => s"""$deps"""
+  //   case (Seq(), Some(_)) => s"""$deps -mp $mps"""
+  //   case (_, None) => s"""$deps -r $res"""
+  //   case (_, Some(_)) => s"""$deps -r $res -mp $mps"""
+  // }
+
 }
