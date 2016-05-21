@@ -30,8 +30,7 @@ trait Executor { self: DefaultTemplate with
 
       val result = %(getSBTExec, "console-quick")(dabbleHome.work.path)
       ExecutionResult(if (result == 0) {
-        val dep: Dependency = ScalaVersionSupplied("", "", "")
-        val newHistoryLine = DabbleHistoryLine(nels(dep), Seq.empty, None)
+        val newHistoryLine = DabbleHistoryLine(nels(dependencies.head, dependencies.tail:_*), resolvers, mpVersion)
         write.over(dabbleWork.history , printHistoryLines(newHistoryLine +: historyLines))
         Option("Dabble completed successfully.")
       } else Option("Could not launch console. See SBT output for details."), result)
