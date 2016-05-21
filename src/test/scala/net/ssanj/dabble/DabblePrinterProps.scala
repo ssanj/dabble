@@ -90,6 +90,7 @@ object DabblePrinterProps             extends
 
     (output == expected) :| labeled(output, expected)
    }
+
  property("print history line") =
    Prop.forAll(genDabbleHistoryLine) {
       case dhl@DabbleHistoryLine(deps: NonEmptyList[Dependency], res: Seq[Resolver], mpv: Option[String]) =>
@@ -110,4 +111,12 @@ object DabblePrinterProps             extends
 
         (output == expected) :| labeled(output.toArray.mkString(","), expected.toArray.mkString(","))
    }
+
+property("print history lines") =
+  Prop.forAll(between(5, 10)(genDabbleHistoryLine)) { lines: Seq[DabbleHistoryLine] =>
+    val output   = printHistoryLines(lines)
+    val expected = lines.map(printHistoryLine).mkString(newline)
+
+    (output == expected) :| labeled(output.toArray.mkString(","), expected.toArray.mkString(","))
+  }
 }

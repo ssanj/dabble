@@ -158,6 +158,11 @@ trait DabbleProps {
     mpv  <- genMacroParadise
   } yield DabbleHistoryLine(deps, res, mpv)
 
+  private[dabble] def between[T](min: Int, max: Int)(gen: Gen[T]): Gen[Seq[T]] = for {
+    l <- Gen.choose(Math.max(0, min), Math.min(Int.MaxValue, max))
+    v <- Gen.listOfN(l, gen)
+  } yield v
+
   private[dabble] implicit val resolverShrink: Shrink[Seq[Resolver]] = Shrink[Seq[Resolver]] {
     case Seq() => Stream.empty
     case Seq(one) => Stream.empty
