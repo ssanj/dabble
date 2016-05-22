@@ -9,7 +9,8 @@ import scalaz.syntax.std.`try`._
 trait Executor { self: DefaultTemplate with
                        DabblePrinter   with
                        DabblePaths     with
-                       DabbleHistory =>
+                       DabbleHistory   with
+                       TerminalSupport =>
 
   protected case class ExecutionResult(message: Option[String], code: Int)
 
@@ -23,18 +24,36 @@ trait Executor { self: DefaultTemplate with
   protected val processingFailed: ExecutionResult = ExecutionResult(None, 1)
 
   protected def build(dependencies: Seq[Dependency], resolvers: Seq[Resolver], mpVersion: Option[String]): ExecutionResult = {
-    val historyLines = readHistory()
     Try {
       log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
       genBuildFileFrom(dabbleHome, dependencies, resolvers, mpVersion)
 
       val result = %(getSBTExec, "console-quick")(dabbleHome.work.path)
-      ExecutionResult(if (result == 0) {
-        val newHistoryLine = DabbleHistoryLine(nels(dependencies.head, dependencies.tail:_*), resolvers, mpVersion)
-        write.over(dabbleWork.history , printHistoryLines(newHistoryLine +: historyLines))
-        Option("Dabble completed successfully.")
-      } else Option("Could not launch console. See SBT output for details."), result)
+
+      val (message, code) =
+        if (result == 0) {
+          writeToHistoryFile(dependencies, resolvers, mpVersion).
+            fold((s"Could not update history file: ${dabbleHome.history}.", -1))(
+                 _ => ("Dabble completed successfully.", result))
+        } else ("Could not launch console. See SBT output for details.", result)
+
+      ExecutionResult(Option(message), code)
     }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
+  }
+
+  private def readHistoryFile(): Seq[DabbleHistoryLine] = {
+    val lines =
+      Try(read.lines(dabbleHome.history, "UTF-8")).
+        toOption.
+        getOrElse(Seq.empty[String])
+
+    readHistory(historyParser.parse(_, DabbleRunConfig()))(lines)
+  }
+
+  private def writeToHistoryFile(dependencies: Seq[Dependency], resolvers: Seq[Resolver], mpVersion: Option[String]): Option[Unit] = {
+    val historyLines   = readHistoryFile()
+    val newHistoryLine = DabbleHistoryLine(nels(dependencies.head, dependencies.tail:_*), resolvers, mpVersion)
+    Try(write.over(dabbleHome.history , printHistoryLines(newHistoryLine +: historyLines))).toOption
   }
 
   protected def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver],

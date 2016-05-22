@@ -1,12 +1,12 @@
 package net.ssanj.dabble
 
-trait TerminalSupport {
+final case class DabbleRunConfig(dependencies: Seq[String] = Seq.empty,
+                           resolvers: Seq[String] = Seq.empty,
+                           macroParadiseVersion: Option[String] = None) {
+  def %(dep: String) = this.copy(dependencies = dependencies :+ dep)
+}
 
-  case class DabbleRunConfig(dependencies: Seq[String] = Seq.empty,
-                             resolvers: Seq[String] = Seq.empty,
-                             macroParadiseVersion: Option[String] = None) {
-    def %(dep: String) = this.copy(dependencies = dependencies :+ dep)
-  }
+trait TerminalSupport {
 
   private def dependencies(op: scopt.OptionParser[DabbleRunConfig]): Unit = {
     op.arg[String]("<dep1> + <dep2> + ... <depn>").

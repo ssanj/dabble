@@ -137,12 +137,4 @@ trait DabblePrinter {
       flatten.
       mkString(" ")
   }
-
-    // val newHistory = (resolvers, mpVersion) match {
-  //   case (Seq(), None) => s"""$deps"""
-  //   case (Seq(), Some(_)) => s"""$deps -mp $mps"""
-  //   case (_, None) => s"""$deps -r $res"""
-  //   case (_, Some(_)) => s"""$deps -r $res -mp $mps"""
-  // }
-
 }

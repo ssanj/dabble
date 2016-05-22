@@ -13,16 +13,17 @@ final case class DabbleHistoryLine(dependencies: NonEmptyList[Dependency],
                                    resolvers: Seq[Resolver]  = Seq.empty,
                                    mpVersion: Option[String] = None)
 
-trait DabbleHistory extends TerminalSupport  with
-                            DependencyParser with
-                            ResolverParser   with
-                            DabblePaths {
+trait DabbleHistory { self: DependencyParser with
+                            ResolverParser =>
 
-  def readHistory(): Vector[DabbleHistoryLine] =
-    Try(read.lines(dabbleHome.work.history, "UTF-8")).
-      toOption.
-      getOrElse(Vector.empty[String]).
-      map(line => historyParser.parse(line.split(" "), DabbleRunConfig())).
+  //essentially we don't need to extend all the above traits. We need:
+  //parser = Array[String] => Option[DabbleRunConfig]
+  //depParser = Seq[String] => String \/ Seq[Dependency]
+  //resolverParser = Seq[String] => String \/ Seq[Resolver]
+  //can we use typeclasses here?
+  def readHistory(f: Array[String] => Option[DabbleRunConfig])(lines: Seq[String]): Seq[DabbleHistoryLine] = {
+    lines.
+      map(line => f(line.split(" "))).
       flatten.
       map { c =>
         (for {
@@ -32,4 +33,5 @@ trait DabbleHistory extends TerminalSupport  with
           fold(l => None, r => Option(r))
       }.
       flatten
+  }
 }
