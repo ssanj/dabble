@@ -119,22 +119,22 @@ trait DabblePrinter {
     lines.map(printHistoryLine).mkString(newline)
 
   def printHistoryLine(line: DabbleHistoryLine): String = {
-    val depsString =
-      line.dependencies.map(Show[Dependency].shows).list.toList.mkString(" + ")
 
-    //TODO: pull out these attrib names into constants
-    val resOp =
-      if (line.resolvers.isEmpty) None
-      else Option(line.resolvers.
-                    map(r => Show[ResolverString].shows(ResolverString(r))).
-                    mkString(","))
+      val depsString =
+        line.dependencies.map(d => Show[DependencyHistoryString].shows(DependencyHistoryString(d))).list.toList.mkString(" + ")
 
-    val mpvOp = line.mpVersion.map(v => s"$v")
+      val resOp =
+        if (line.resolvers.isEmpty) None
+        else Option(line.resolvers.
+                      map(r => Show[ResolverString].shows(ResolverString(r))).
+                      mkString(",")).map(r => s"-r ${r}")
 
-    Seq(Option(depsString),
-        resOp.map(r => s"""-r "${r}""""),
-        mpvOp.map(v => s"""-mp "${v}"""")).
-      flatten.
-      mkString(" ")
+        val mpvOp = line.mpVersion.map(v => s"$v").map(v => s"-mp $v")
+
+      Seq(Option(depsString),
+          resOp,
+          mpvOp).
+        flatten.
+        mkString(" ")
   }
 }

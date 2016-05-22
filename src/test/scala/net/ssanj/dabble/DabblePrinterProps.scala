@@ -95,17 +95,22 @@ object DabblePrinterProps             extends
    Prop.forAll(genDabbleHistoryLine) {
       case dhl@DabbleHistoryLine(deps: NonEmptyList[Dependency], res: Seq[Resolver], mpv: Option[String]) =>
         val output = printHistoryLine(dhl)
-        val expectedDeps = deps.map(Show[Dependency].shows).list.toList.mkString(" + ")
+        val expectedDeps = deps.map(d =>
+                                        Show[DependencyHistoryString].
+                                          shows(DependencyHistoryString(d))).
+                                list.
+                                toList.
+                                mkString(" + ")
 
         val expectedResolvers =
           if (res.isEmpty) ""
           else {
             val r =  res.map(r => Show[ResolverString].shows(ResolverString(r))).mkString(",")
-            s""" -r "${r}""""
+            s""" -r ${r}"""
           }
 
         val expectedMacroParadiseVesion =
-          mpv.map(v => s""" -mp "${v}"""").getOrElse("")
+          mpv.map(v => s""" -mp ${v}""").getOrElse("")
 
         val expected = s"${expectedDeps}${expectedResolvers}${expectedMacroParadiseVesion}"
 

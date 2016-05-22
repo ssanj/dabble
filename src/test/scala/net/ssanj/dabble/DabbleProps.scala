@@ -131,6 +131,9 @@ trait DabbleProps {
               genBintrayResolverString,
               genCustomResolverString)
 
+  private[dabble] def genResolverStrings: Gen[String] =
+    between(1, 10)(genResolverString).map(_.mkString(","))
+
   private [dabble] def genResolverStringList: Gen[Seq[String]] =
     (for {
       length   <- Gen.choose(1, 3)

@@ -21,17 +21,20 @@ trait DabbleHistory { self: DependencyParser with
   //depParser = Seq[String] => String \/ Seq[Dependency]
   //resolverParser = Seq[String] => String \/ Seq[Resolver]
   //can we use typeclasses here?
+  //TODO: Return the left from parsing the input.
   def readHistory(f: Array[String] => Option[DabbleRunConfig])(lines: Seq[String]): Seq[DabbleHistoryLine] = {
-    lines.
-      map(line => f(line.split(" "))).
-      flatten.
-      map { c =>
-        (for {
-          deps <- parseDependencies(c.dependencies)
-          res  <- (if (c.resolvers.nonEmpty) parseResolvers(c.resolvers) else Seq.empty.right[String])
-        } yield (DabbleHistoryLine(nels(deps.head, deps.tail:_*), res, c.macroParadiseVersion))).
-          fold(l => None, r => Option(r))
-      }.
-      flatten
+    val result =
+      lines.
+        map(line => f(line.split(" "))).
+        flatten.
+        map { c =>
+          (for {
+            deps <- parseDependencies(c.dependencies)
+            res  <- (if (c.resolvers.nonEmpty) parseResolvers(c.resolvers) else Seq.empty.right[String])
+          } yield (DabbleHistoryLine(nels(deps.head, deps.tail:_*), res, c.macroParadiseVersion))).
+            fold(l => {println(s"error: $l"); None}, r => Option(r))
+        }.
+        flatten
+    result
   }
 }

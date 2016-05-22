@@ -12,6 +12,7 @@ sealed trait Dependency
 final case class ScalaVersionSupplied(org: String, name: String, version: String, config: Option[String] = None) extends Dependency
 final case class ScalaVersionDerived (org: String, name: String, version: String, config: Option[String] = None) extends Dependency
 
+final case class DependencyHistoryString(dependency: Dependency)
 /**
  * Parses the inputs into a Seq[Dependency. Dependencies can be specified in two forms:
  *  1. org  % name % version [[ScalaVersionSupplied]]

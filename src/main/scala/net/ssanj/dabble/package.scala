@@ -11,6 +11,11 @@ package object dabble {
       case ScalaVersionDerived (org, name, version, _) => s""""${org}" %% "${name}" % "$version""""
     }
 
+    implicit val dependencyStringShows: Show[DependencyHistoryString] = shows {
+      case DependencyHistoryString(ScalaVersionSupplied(org, name, version, _)) => s"""${org} % ${name} % $version"""
+      case DependencyHistoryString(ScalaVersionDerived (org, name, version, _)) => s"""${org} %% ${name} % $version"""
+    }
+
     implicit val resolverShows: Show[Resolver] = shows {
       case ReleaseAndSnapshots(Sonatype, Release)     => """Resolver.sonatypeRepo("releases")"""
       case ReleaseAndSnapshots(Sonatype, Snapshot)    => """Resolver.sonatypeRepo("snapshots")"""
