@@ -5,15 +5,31 @@ import ammonite.ops._
 import scalaz._
 import scalaz.NonEmptyList.nels
 import scalaz.syntax.std.`try`._
+import scalaz.syntax.either._
 import scalaz.syntax.applicative._
+
+final case class Outcome[+E, +A](values: Seq[A], warnings: Seq[E]) {
+  val hasValues: Boolean = values.nonEmpty
+  val hasWarnings: Boolean = warnings.nonEmpty
+  val hasBoth: Boolean = hasValues && hasWarnings
+}
+
+object Outcome {
+  def values[E, A](values: Seq[A]): Outcome[E, A] =
+    Outcome(values = values, warnings = Seq.empty[E])
+
+  def warnings[E, A](warnings: Seq[E]): Outcome[E, A] =
+    Outcome(values = Seq.empty[A], warnings = warnings)
+
+  def both[E, A](values: Seq[A], warnings: Seq[E]): Outcome[E, A] =
+    Outcome(values = values, warnings = warnings)
+}
 
 trait Executor { self: DefaultTemplate with
                        DabblePrinter   with
                        DabblePaths     with
                        DabbleHistory   with
                        TerminalSupport =>
-
-  type ErrorsOr[A] = ValidationNel[String, A]
 
   protected case class ExecutionResult(message: Option[String], code: Int)
 
@@ -37,8 +53,11 @@ trait Executor { self: DefaultTemplate with
         if (result == 0) {
           writeToHistoryFile(dependencies, resolvers, mpVersion).
             fold(l => (s"Could not update history file ${dabbleHome.history}," +
-                        s" due to the following errors ${l.list.toList.mkString(",")}", -1),
-                 _ => ("Dabble completed successfully.", result))
+                        s" due to the following error: $l", -1),
+                 o => ("Dabble completed successfully" +
+                        (if (o.hasWarnings)
+                          s", but had the following warnings: ${o.warnings.mkString(newline)}"
+                         else ".") , result))
         } else ("Could not launch console. See SBT output for details.", result)
 
       ExecutionResult(Option(message), code)
@@ -56,15 +75,16 @@ trait Executor { self: DefaultTemplate with
 
   private def writeToHistoryFile(dependencies: Seq[Dependency],
                                  resolvers: Seq[Resolver],
-                                 mpVersion: Option[String]): ErrorsOr[Unit] = {
-    val historyLines   = readHistoryFile() //HistoryLinesOr
+                                 mpVersion: Option[String]): String \/ Outcome[String, Nothing] = {
+    val historyLines   = readHistoryFile() //Seq[ValidationNel[String, DabbleHistoryLine]]
     val newHistoryLine = DabbleHistoryLine(nels(dependencies.head, dependencies.tail:_*), resolvers, mpVersion)
 
-    def writeLinesA: ValidationNel[String, Seq[DabbleHistoryLine] => Unit] =
-      Try((lines: Seq[DabbleHistoryLine]) => write.over(dabbleHome.history, printHistoryLines(newHistoryLine +: lines))).
-        toValidationNel.leftMap(_.map(_.getMessage))
+    val oldHistoryLines: Seq[DabbleHistoryLine] = historyLines.collect { case Success(lines) => lines }
+    val historyLineWarnings: Seq[String] = historyLines.collect { case Failure(warnings) => warnings.list.toList }.flatten
 
-    Applicative[ErrorsOr].ap(historyLines)(writeLinesA)
+    Try(write.over(dabbleHome.history, printHistoryLines(newHistoryLine +: oldHistoryLines))).
+      cata(_ => Outcome.warnings[String, Nothing](warnings = historyLineWarnings).right[String],
+           e => e.getMessage.left[Outcome[String, Nothing]])
   }
 
   protected def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver],
