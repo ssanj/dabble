@@ -7,29 +7,15 @@ import scalaz.NonEmptyList.nels
 import scalaz.syntax.std.`try`._
 import scalaz.syntax.either._
 import scalaz.syntax.applicative._
-
-final case class Outcome[+E, +A](values: Seq[A], warnings: Seq[E]) {
-  val hasValues: Boolean = values.nonEmpty
-  val hasWarnings: Boolean = warnings.nonEmpty
-  val hasBoth: Boolean = hasValues && hasWarnings
-}
-
-object Outcome {
-  def values[E, A](values: Seq[A]): Outcome[E, A] =
-    Outcome(values = values, warnings = Seq.empty[E])
-
-  def warnings[E, A](warnings: Seq[E]): Outcome[E, A] =
-    Outcome(values = Seq.empty[A], warnings = warnings)
-
-  def both[E, A](values: Seq[A], warnings: Seq[E]): Outcome[E, A] =
-    Outcome(values = values, warnings = warnings)
-}
+import \&/.{This, That, Both}
 
 trait Executor { self: DefaultTemplate with
                        DabblePrinter   with
                        DabblePaths     with
                        DabbleHistory   with
                        TerminalSupport =>
+
+  type Outcome = Seq[String] \&/ Unit
 
   protected case class ExecutionResult(message: Option[String], code: Int)
 
@@ -51,13 +37,16 @@ trait Executor { self: DefaultTemplate with
 
       val (message, code) =
         if (result == 0) {
-          writeToHistoryFile(dependencies, resolvers, mpVersion).
-            fold(l => (s"Could not update history file ${dabbleHome.history}," +
-                        s" due to the following error: $l", -1),
-                 o => ("Dabble completed successfully" +
-                        (if (o.hasWarnings)
-                          s", but had the following warnings: ${o.warnings.mkString(newline)}"
-                         else ".") , result))
+          writeToHistoryFile(dependencies, resolvers, mpVersion) match {
+            case This(error)       => (s"Could not update history file ${dabbleHome.history}," +
+                                        s" due to the following errors: ${error.mkString(newline)}", -1)
+
+            case That(_)           => ("Dabble completed successfully.", result)
+
+            case Both(warnings, _) => ("Dabble completed successfully" +
+                                        ", but had the following warnings: " +
+                                        s"${warnings.mkString(newline)}", result)
+          }
         } else ("Could not launch console. See SBT output for details.", result)
 
       ExecutionResult(Option(message), code)
@@ -73,9 +62,10 @@ trait Executor { self: DefaultTemplate with
     readHistory(historyParser.parse(_, DabbleRunConfig()))(lines)
   }
 
+
   private def writeToHistoryFile(dependencies: Seq[Dependency],
                                  resolvers: Seq[Resolver],
-                                 mpVersion: Option[String]): String \/ Outcome[String, Nothing] = {
+                                 mpVersion: Option[String]): Outcome = {
     val historyLines   = readHistoryFile() //Seq[ValidationNel[String, DabbleHistoryLine]]
     val newHistoryLine = DabbleHistoryLine(nels(dependencies.head, dependencies.tail:_*), resolvers, mpVersion)
 
@@ -83,8 +73,12 @@ trait Executor { self: DefaultTemplate with
     val historyLineWarnings: Seq[String] = historyLines.collect { case Failure(warnings) => warnings.list.toList }.flatten
 
     Try(write.over(dabbleHome.history, printHistoryLines(newHistoryLine +: oldHistoryLines))).
-      cata(_ => Outcome.warnings[String, Nothing](warnings = historyLineWarnings).right[String],
-           e => e.getMessage.left[Outcome[String, Nothing]])
+      cata(
+        {_ =>
+          if (historyLineWarnings.isEmpty) That(())
+          else Both(historyLineWarnings, ())
+        },
+        e => This(Seq(e.getMessage)))
   }
 
   protected def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver],
@@ -120,17 +114,21 @@ trait Executor { self: DefaultTemplate with
 
   private def getInitialCommands(dependencies: Seq[Dependency], resolvers: Seq[Resolver],
     mpVersion: Option[String]): String = {
+
     val dependencyText = printLibraryDependenciesText(dependencies)
+
     val resolverText   = printResolversAsText(resolvers)
 
     val depString      = s"${newline}Dabble injected the following libraries:" +
                           s"${newline}${dependencyText}${newline}"
+
     val resolverString = if (resolvers.nonEmpty) {
                           s"${newline}Dabble injected the following resolvers:" +
-                            s"${newline}${resolverText}${newline}"
+                           s"${newline}${resolverText}${newline}"
                          } else ""
+
     val cpString       = mpVersion.fold("")(v => s"${newline}Dabble injected macro paradise version:" +
-                                                   s" ${v}${newline}")
+                                                  s" ${v}${newline}")
     val injections     = depString      +
                          resolverString +
                          cpString
