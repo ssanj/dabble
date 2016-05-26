@@ -53,7 +53,7 @@ trait Executor { self: DefaultTemplate with
     }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
   }
 
-  private def readHistoryFile(): HistoryLinesOr = {
+  protected def readHistoryFile(): HistoryLinesOr = {
     val lines =
       Try(read.lines(dabbleHome.history, "UTF-8")).
         toOption.

@@ -2,7 +2,8 @@ package net.ssanj.dabble
 
 final case class DabbleRunConfig(dependencies: Seq[String] = Seq.empty,
                            resolvers: Seq[String] = Seq.empty,
-                           macroParadiseVersion: Option[String] = None) {
+                           macroParadiseVersion: Option[String] = None,
+                           historyCommand: Boolean = false) {
   def %(dep: String) = this.copy(dependencies = dependencies :+ dep)
 }
 
@@ -10,8 +11,8 @@ trait TerminalSupport {
 
   private def dependencies(op: scopt.OptionParser[DabbleRunConfig]): Unit = {
     op.arg[String]("<dep1> + <dep2> + ... <depn>").
-      // minOccurs(5).
       unbounded().
+      optional().
       action { (dep, config) => config % dep }.
       text("""The list of dependencies to include.""" + newlineAndTab +
            """Multiple dependencies should be separated by a + sign.""" + newline + newlineAndTab +
@@ -67,6 +68,13 @@ trait TerminalSupport {
     }
   }
 
+  private def historyCommand(op: scopt.OptionParser[DabbleRunConfig]): Unit = {
+    op.cmd("history").
+    abbr("hi").
+    action { (_, c) => c.copy(historyCommand = true) }.
+    text("command history.")
+  }
+
   lazy val parser = new scopt.OptionParser[DabbleRunConfig]("Dabble") {
     head(s"$title")
     toggle("help", Option("h"))(_ => showUsage)(this)
@@ -77,10 +85,11 @@ trait TerminalSupport {
     showUsageOnError
     note(s"${newline}Please see https://github.com/ssanj/dabble for more examples.")
     checkConfig{ c =>
-      if (c.dependencies.length < 5)
+      if (c.dependencies.length < 5 && !c.historyCommand)
         failure("Invalid format for dependencies. Please see accepted formats below.")
       else success
     }
+    historyCommand(this)
   }
 
   //We turn off all checks, and documentation as we don't need them if this fails
