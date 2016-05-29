@@ -11,7 +11,13 @@ import scalaz.Free._
 object DabbleHistoryDslDef {
 
   //1. Dsl
-  final case class OneBased(value: Int)
+  final case class OneBased private (value: Int) {
+    val toZeroBased: Int = Math.max(0, value - 1)
+  }
+
+  object OneBased {
+    def oneBased(value: Int): OneBased = OneBased(Math.max(0, value + 1))
+  }
 
   sealed trait HistoryChoice
   final case object ExitHistory extends HistoryChoice //q
@@ -37,30 +43,26 @@ object DabbleHistoryDslDef {
   def exit(code: Int): DabbleScript[Unit] = liftF(Exit(code))
 
   //3. Compose functions
-  def getUserChoice(prompt: String, maxLines: OneBased): DabbleScript[HistoryChoice] =
+  def getUserChoice(prompt: String,
+                    launchDabble: DabbleHistoryLine => Unit,
+                    hLines: Seq[DabbleHistoryLine]): DabbleScript[Unit] = {
+
     readUserInput(prompt).
-      map {
-            case "q" => ExitHistory
+      flatMap {
+            case "q" => exit(0)
             case in =>
+              import OneBased._
+
+              val maxLines = oneBased(hLines.length)
+
               Try(in.toInt).
                 filter(n => n >= 1 && n <= maxLines.value).
-                map(line => HistoryLine(OneBased(line))).
-                getOrElse(UnhandledInput(in))
+                map{ line =>
+                  launchDabble(hLines(oneBased(line).toZeroBased))
+                  exit(0)
+                }.
+                getOrElse(getUserChoice(prompt, launchDabble, hLines))
       }
-
-  def performUserChoice(choice: HistoryChoice, lines: Seq[DabbleHistoryLine], launchDabble: DabbleHistoryLine => Unit): DabbleScript[Unit] = {
-    choice match {
-      case HistoryLine(OneBased(line)) =>
-        launchDabble(lines(line - 1))
-        exit(0)
-
-      case UnhandledInput(_) => for {
-        _ <- printItem("invalid input")
-        _ <- exit(1)
-      } yield ()
-
-      case ExitHistory => exit(0)
-    }
   }
 
   def noHistory: DabbleScript[Unit] = for {
@@ -69,12 +71,13 @@ object DabbleHistoryDslDef {
     _ <- exit(0)
   } yield ()
 
-  def hasHistory(prompt: String, hLines: Seq[DabbleHistoryLine], menu: String, launchDabble: DabbleHistoryLine => Unit): DabbleScript[Unit] = {
-     val maxLines = OneBased(hLines.length + 1)
+  def chooseHistory(prompt: String,
+                    hLines: Seq[DabbleHistoryLine],
+                    menu: String,
+                    launchDabble: DabbleHistoryLine => Unit): DabbleScript[Unit] = {
      for {
        _      <- printItem(menu)
-       choice <- getUserChoice(prompt, maxLines)
-       _      <- performUserChoice(choice, hLines, launchDabble)
+       _      <- getUserChoice(prompt, launchDabble, hLines)
      } yield ()
   }
 
@@ -86,6 +89,6 @@ object DabbleHistoryDslDef {
                      launchDabble: DabbleHistoryLine => Unit): DabbleScript[Unit] = for {
     lines <- readHistoryFile(historyFileName)
     hLines = lines.map(hParser)
-    _ <-   if (hLines.nonEmpty) hasHistory(prompt, hLines, hMenu(hLines), launchDabble) else noHistory
+    _ <-   if (hLines.nonEmpty) chooseHistory(prompt, hLines, hMenu(hLines), launchDabble) else noHistory
   } yield ()
 }
