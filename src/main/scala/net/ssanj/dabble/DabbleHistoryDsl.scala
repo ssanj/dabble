@@ -13,10 +13,14 @@ object DabbleHistoryDslDef {
   //1. Dsl
   final case class OneBased private (value: Int) {
     val toZeroBased: Int = Math.max(0, value - 1)
+    def includes(n: Int): Boolean = n >= OneBased.MIN && n <= value
   }
 
   object OneBased {
-    def oneBased(value: Int): OneBased = OneBased(Math.max(0, value + 1))
+    val MIN = 1
+
+    def fromZeroBased(value: Int): OneBased = fromOneBased(value + 1)
+    def fromOneBased(value: Int): OneBased = OneBased(Math.max(0, value))
   }
 
   sealed trait HistoryChoice
@@ -53,12 +57,12 @@ object DabbleHistoryDslDef {
             case in =>
               import OneBased._
 
-              val maxLines = oneBased(hLines.length)
+              val maxLines = fromZeroBased(hLines.length)
 
               Try(in.toInt).
-                filter(n => n >= 1 && n <= maxLines.value).
+                filter(maxLines.includes).
                 map{ line =>
-                  launchDabble(hLines(oneBased(line).toZeroBased))
+                  launchDabble(hLines(fromOneBased(line).toZeroBased))
                   exit(0)
                 }.
                 getOrElse(getUserChoice(prompt, launchDabble, hLines))
