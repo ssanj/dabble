@@ -20,7 +20,7 @@ object DabbleHistoryDslDef {
     val MIN = 1
 
     def fromZeroBased(value: Int): OneBased = fromOneBased(value + 1)
-    def fromOneBased(value: Int): OneBased = OneBased(Math.max(0, value))
+    def fromOneBased(value: Int): OneBased = OneBased(Math.max(MIN, value))
   }
 
   sealed trait HistoryChoice
