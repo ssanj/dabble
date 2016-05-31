@@ -71,8 +71,10 @@ trait Executor { self: DefaultTemplate with
 
     val oldHistoryLines: Seq[DabbleHistoryLine] = historyLines.collect { case Success(lines) => lines }
     val historyLineWarnings: Seq[String] = historyLines.collect { case Failure(warnings) => warnings.list.toList }.flatten
+    import scala.collection.mutable.LinkedHashSet
+    val unqiueHistoryLines = LinkedHashSet() ++ (newHistoryLine +: oldHistoryLines)
 
-    Try(write.over(dabbleHome.history, printHistoryLines(newHistoryLine +: oldHistoryLines))).
+    Try(write.over(dabbleHome.history, printHistoryLines(unqiueHistoryLines.toSeq))).
       cata(
         {_ =>
           if (historyLineWarnings.isEmpty) That(())

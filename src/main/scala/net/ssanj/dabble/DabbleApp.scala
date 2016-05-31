@@ -37,7 +37,10 @@ object DabbleApp extends DependencyParser  with
 
         exit(result)
       case Some(DabbleRunConfig(_, _, _, true)) =>
-        val historyLines = readHistoryFile().collect { case Success(line) => line }
+        val historyLinesRead = readHistoryFile().collect { case Success(line) => line }
+        import scala.collection.mutable.LinkedHashSet
+
+        val historyLines = (LinkedHashSet() ++ historyLinesRead).toSeq
         if (historyLines.nonEmpty) {
 
           val header  = "Dabble History"
