@@ -1,9 +1,11 @@
 package net.ssanj.dabble
 
+final case class HistoryCommand(term: Option[String])
+
 final case class DabbleRunConfig(dependencies: Seq[String] = Seq.empty,
                            resolvers: Seq[String] = Seq.empty,
                            macroParadiseVersion: Option[String] = None,
-                           historyCommand: Boolean = false) {
+                           historyCommand: Option[HistoryCommand] = None) {
   def %(dep: String) = this.copy(dependencies = dependencies :+ dep)
 }
 
@@ -71,7 +73,17 @@ trait TerminalSupport {
   private def historyCommand(op: scopt.OptionParser[DabbleRunConfig]): Unit = {
     op.cmd("history").
     abbr("hi").
-    action { (_, c) => c.copy(historyCommand = true) }.
+    action { (_, c) => c.copy(historyCommand = Option(HistoryCommand(None))) }.
+    children {
+      op.opt[String]("term").
+      abbr("t").
+      valueName("""<search term>""").
+      text("""The term to search through history for""").
+      action { (term, config) =>
+        if (term.trim.nonEmpty) config.copy(historyCommand = Option(HistoryCommand(Option(term))))
+        else config
+      }
+    }.
     text("command history.")
   }
 
@@ -85,7 +97,7 @@ trait TerminalSupport {
     showUsageOnError
     note(s"${newline}Please see https://github.com/ssanj/dabble for more examples.")
     checkConfig{ c =>
-      if (c.dependencies.length < 5 && !c.historyCommand)
+      if (c.dependencies.length < 5 && c.historyCommand.isEmpty)
         failure("Invalid format for dependencies. Please see accepted formats below.")
       else success
     }

@@ -106,5 +106,5 @@ dabble "oncue.knobs" %% "core" % "3.6.1" -r "bintray:oncue:releases"
 
 * history file should be read on start up [x]
 * successful exits should add entries into history structure in mem. [x]
-* history structure should be unique []
+* history structure should be unique [x]
 * write out history on successful exit [x]

@@ -23,7 +23,7 @@ object DabbleApp extends DependencyParser  with
    //TODO: 2. add searching across history
   def main(args: Array[String]) {
     parser.parse(args, DabbleRunConfig()) match {
-      case Some(DabbleRunConfig(deps, res, mp, false)) =>
+      case Some(DabbleRunConfig(deps, res, mp, None)) =>
         getBanner.foreach(println)
 
         val result =
@@ -36,11 +36,26 @@ object DabbleApp extends DependencyParser  with
 
 
         exit(result)
-      case Some(DabbleRunConfig(_, _, _, true)) =>
+      case Some(DabbleRunConfig(_, _, _, Some(HistoryCommand(searchTerm)))) =>
         val historyLinesRead = readHistoryFile().collect { case Success(line) => line }
         import scala.collection.mutable.LinkedHashSet
 
-        val historyLines = (LinkedHashSet() ++ historyLinesRead).toSeq
+        val uniques = (LinkedHashSet() ++ historyLinesRead).toSeq
+        val historyLines =
+          searchTerm match {
+            case Some(term) => uniques.filter {
+              case DabbleHistoryLine(deps, _, _) =>
+                !deps.list.filter {
+                  case ScalaVersionSupplied(org, name, _, _) =>
+                    org.contains(term) || name.contains(term)
+                  case ScalaVersionDerived(org, name, _, _) =>
+                    org.contains(term) || name.contains(term)
+                }.isEmpty
+            }
+
+            case None => uniques
+          }
+
         if (historyLines.nonEmpty) {
 
           val header  = "Dabble History"
