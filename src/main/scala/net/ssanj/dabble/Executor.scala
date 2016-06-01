@@ -28,7 +28,10 @@ trait Executor {
 
   val processingFailed: ExecutionResult = ExecutionResult(None, 1)
 
-  def build(dependencies: Seq[Dependency], resolvers: Seq[Resolver], mpVersion: Option[String]): ExecutionResult = {
+  def build(dependencies: Seq[Dependency],
+            resolvers: Seq[Resolver],
+            mpVersion: Option[String],
+            hlaw: HistoryLinesAndWarnings): ExecutionResult = {
     Try {
       log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
       genBuildFileFrom(dabbleHome, dependencies, resolvers, mpVersion)
@@ -37,9 +40,9 @@ trait Executor {
 
       val (message, code) =
         if (result == 0) {
-          writeToHistoryFile(dependencies, resolvers, mpVersion) match {
-            case This(error)       => (s"Could not update history file ${dabbleHome.history}," +
-                                        s" due to the following errors: ${error.mkString(newline)}", -1)
+          writeToHistoryFile(dependencies, resolvers, mpVersion, hlaw) match {
+            case This(errors)      => (s"Could not update history file ${dabbleHome.history}," +
+                                        s" due to the following errors: ${errors.mkString(newline)}", -1)
 
             case That(_)           => ("Dabble completed successfully.", result)
 
@@ -54,33 +57,43 @@ trait Executor {
   }
 
   def readHistoryFile(): HistoryLinesOr = {
-    val lines =
-      Try(read.lines(dabbleHome.history, "UTF-8")).
+    val lines = readFile(dabbleHome.history)
+    readHistory(historyParser.parse(_, DabbleRunConfig()))(lines)
+  }
+
+  def readFile(filename: Path): Seq[String] = {
+      Try(read.lines(filename, "UTF-8")).
         toOption.
         getOrElse(Seq.empty[String])
+  }
 
-    readHistory(historyParser.parse(_, DabbleRunConfig()))(lines)
+  def readHistoryFileWithWarnings(): HistoryLinesAndWarnings = {
+    val lines = readFile(dabbleHome.history)
+    readHistoryWithWarnings(historyParser.parse(_, DabbleRunConfig()))(lines)
   }
 
 
   private def writeToHistoryFile(dependencies: Seq[Dependency],
                                  resolvers: Seq[Resolver],
-                                 mpVersion: Option[String]): Outcome = {
-    val historyLines   = readHistoryFile() //Seq[ValidationNel[String, DabbleHistoryLine]]
+                                 mpVersion: Option[String],
+                                 hlaw: HistoryLinesAndWarnings): Outcome = {
+    // val historyLines   = readHistoryFile() //Seq[ValidationNel[String, DabbleHistoryLine]]
     val newHistoryLine = DabbleHistoryLine(nels(dependencies.head, dependencies.tail:_*), resolvers, mpVersion)
 
-    val oldHistoryLines: Seq[DabbleHistoryLine] = historyLines.collect { case Success(lines) => lines }
-    val historyLineWarnings: Seq[String] = historyLines.collect { case Failure(warnings) => warnings.list.toList }.flatten
+    // val oldHistoryLines: Seq[DabbleHistoryLine] = historyLines.collect { case Success(lines) => lines }
+    // val historyLineWarnings: Seq[String] = historyLines.collect { case Failure(warnings) => warnings.list.toList }.flatten
     import scala.collection.mutable.LinkedHashSet
-    val unqiueHistoryLines = LinkedHashSet() ++ (newHistoryLine +: oldHistoryLines)
+    val unqiueHistoryLines = LinkedHashSet() ++ (newHistoryLine +: hlaw.onlyThat.getOrElse(Seq.empty))
 
+    //TODO: Encode errors and warnings separately.
+    //sealed trait Failure
+    //final case class Error(message: String) extends Failure
+    //final case class Warning(message: String) extends Failure
     Try(write.over(dabbleHome.history, printHistoryLines(unqiueHistoryLines.toSeq))).
       cata(
-        {_ =>
-          if (historyLineWarnings.isEmpty) That(())
-          else Both(historyLineWarnings, ())
-        },
-        e => This(Seq(e.getMessage)))
+        {_ => hlaw.bimap(identity, _ => ()) },
+        e  => hlaw.bimap(_ => Seq(e.getMessage), _ => ())
+      )
   }
 
   def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver],

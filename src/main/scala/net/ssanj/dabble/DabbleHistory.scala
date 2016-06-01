@@ -21,10 +21,14 @@ trait DabbleHistory {
 
   type HistoryLinesOr = Seq[ValidationNel[String, DabbleHistoryLine]]
 
-  def readHistory(f: Array[String] => Option[DabbleRunConfig])(lines: Seq[String]): HistoryLinesOr = {
+  type CommandlineParser = Array[String] => Option[DabbleRunConfig]
+
+  type HistoryLinesAndWarnings = Seq[String] \&/ Seq[DabbleHistoryLine]
+
+  def readHistory(cmdlnParser: CommandlineParser)(lines: Seq[String]): HistoryLinesOr = {
     val result =
       lines.
-        map(line => f(line.split(" "))).
+        map(line => cmdlnParser(line.split(" "))).
         flatten.
         map { c =>
           (for {
@@ -36,6 +40,17 @@ trait DabbleHistory {
 
     result
   }
+
+  def readHistoryWithWarnings(cmdlnParser: CommandlineParser)(lines: Seq[String]): HistoryLinesAndWarnings = {
+      import \&/._
+      val validationNels = readHistory(cmdlnParser)(lines)
+      val successes = validationNels.collect { case Success(dhl) => dhl }
+      val warnings  = validationNels.collect { case Failure(warningsNel) => warningsNel.list.toList } flatten
+
+      if (successes.isEmpty) This(warnings)
+      else if (warnings.isEmpty) That(successes)
+      else Both(warnings, successes)
+    }
 }
 
 

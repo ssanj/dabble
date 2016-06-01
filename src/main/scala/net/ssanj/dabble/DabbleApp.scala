@@ -24,19 +24,20 @@ object DabbleApp {
     parser.parse(args, DabbleRunConfig()) match {
       case Some(DabbleRunConfig(deps, res, mp, None)) =>
         getBanner.foreach(println)
-
         val result =
               (for {
                 d <- parseDependencies(deps)
                 r <- (if (res.nonEmpty) parseResolvers(res)
                       else Seq.empty.right[String])
+                hlaw = readHistoryFileWithWarnings()
                 //TODO: Create a DabbleConfig from DabbleRunConfig which has valid types.
-              } yield (d, r, mp)).fold(processingFailed, (build _).tupled)
+              } yield (d, r, mp, hlaw)).fold(processingFailed, (build _).tupled)
 
 
         exit(result)
       case Some(DabbleRunConfig(_, _, _, Some(HistoryCommand(searchTerm)))) =>
-        val historyLinesRead = readHistoryFile().collect { case Success(line) => line }
+        val hlaw = readHistoryFileWithWarnings()
+        val historyLinesRead = hlaw.onlyThat.getOrElse(Seq.empty)
         import scala.collection.mutable.LinkedHashSet
 
         val uniques = (LinkedHashSet() ++ historyLinesRead).toSeq
@@ -72,7 +73,7 @@ object DabbleApp {
               val line = historyLines(n)
               println(s"${newline}Launching dabble with:${newline}${printHistoryLine(line)}${newline}")
               val DabbleHistoryLine(dependencies, resolvers, mpVersion) = line
-              build(dependencies.list.toList, resolvers, mpVersion)
+              build(dependencies.list.toList, resolvers, mpVersion, hlaw)
           }
         } else {
           println("You have not made history. ")
