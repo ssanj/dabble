@@ -112,6 +112,8 @@ trait TerminalSupport {
   }
 }
 
+object TerminalSupport extends TerminalSupport
+
 object Terminal extends App with TerminalSupport {
   parser.parse(args, DabbleRunConfig()) match {
     case Some(conf) => println(s"you got conf: $conf")

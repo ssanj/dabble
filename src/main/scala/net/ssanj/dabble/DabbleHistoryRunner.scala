@@ -20,6 +20,8 @@ class ConsoleInterpreter(historyFileContents: Seq[String]) extends (DabbleHistor
       scala.io.StdIn.readLine
 
     case Exit(code: Int) => System.exit(code)
+
+    case _ => ???
   }
 }
 
@@ -45,6 +47,8 @@ class TestInterpreter(val world: Map[String, Any], val actions: ListBuffer[Strin
 
     case Exit(code: Int) => actions += s"exiting with code: $code"
     ()
+
+    case _ => ???
   }
 }
 

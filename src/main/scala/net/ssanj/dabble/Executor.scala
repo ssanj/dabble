@@ -8,27 +8,27 @@ import scalaz.syntax.std.`try`._
 import scalaz.syntax.either._
 import scalaz.syntax.applicative._
 import \&/.{This, That, Both}
+import DabblePrinter._
+import DabbleHistory._
+import DabblePaths._
+import DefaultTemplate._
+import TerminalSupport._
 
-trait Executor { self: DefaultTemplate with
-                       DabblePrinter   with
-                       DabblePaths     with
-                       DabbleHistory   with
-                       TerminalSupport =>
-
+trait Executor {
   type Outcome = Seq[String] \&/ Unit
 
-  protected case class ExecutionResult(message: Option[String], code: Int)
+  case class ExecutionResult(message: Option[String], code: Int)
 
-  protected def exit(result: ExecutionResult): Unit = {
+  def exit(result: ExecutionResult): Unit = {
     result.message.foreach(m => log(m))
     System.exit(result.code)
   }
 
-  protected def processingFailed(error: String): ExecutionResult = ExecutionResult(Option(error), 1)
+  def processingFailed(error: String): ExecutionResult = ExecutionResult(Option(error), 1)
 
-  protected val processingFailed: ExecutionResult = ExecutionResult(None, 1)
+  val processingFailed: ExecutionResult = ExecutionResult(None, 1)
 
-  protected def build(dependencies: Seq[Dependency], resolvers: Seq[Resolver], mpVersion: Option[String]): ExecutionResult = {
+  def build(dependencies: Seq[Dependency], resolvers: Seq[Resolver], mpVersion: Option[String]): ExecutionResult = {
     Try {
       log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
       genBuildFileFrom(dabbleHome, dependencies, resolvers, mpVersion)
@@ -53,7 +53,7 @@ trait Executor { self: DefaultTemplate with
     }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
   }
 
-  protected def readHistoryFile(): HistoryLinesOr = {
+  def readHistoryFile(): HistoryLinesOr = {
     val lines =
       Try(read.lines(dabbleHome.history, "UTF-8")).
         toOption.
@@ -83,7 +83,7 @@ trait Executor { self: DefaultTemplate with
         e => This(Seq(e.getMessage)))
   }
 
-  protected def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver],
+  def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver],
     mpVersion: Option[String]): Unit = {
 
     val defaultSbtTemplate   = home.path/defaultBuildFile
@@ -142,3 +142,5 @@ trait Executor { self: DefaultTemplate with
 
   def getSBTExec = if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "sbt.bat" else "sbt"
 }
+
+object Executor extends Executor

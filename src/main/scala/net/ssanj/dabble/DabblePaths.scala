@@ -19,3 +19,5 @@ trait DabblePaths {
 
   val dabbleWork = dabbleHome.work
 }
+
+object DabblePaths extends DabblePaths

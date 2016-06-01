@@ -6,21 +6,20 @@ import scala.util.Try
 import scalaz.{Success, \/, -\/, \/-}
 import scalaz.syntax.either._
 
-object DabbleApp extends DependencyParser  with
-                         ResolverParser    with
-                         DabblePrinter     with
-                         DefaultTemplate   with
-                         Executor          with
-                         DabblePaths       with
-                         DabbleHistory     with
-                         Banner            with
-                         TerminalSupport {
+import DependencyParser._
+import ResolverParser._
+import DabblePrinter._
+import DabbleHistory._
+import DabblePaths._
+import DefaultTemplate._
+import TerminalSupport._
+import Banner._
+import Executor._
 
+object DabbleApp {
 
    //TODO: Make this safe, use: Try
    //Move logic into a separate module.
-   //TODO: 1. remove duplicate history entries
-   //TODO: 2. add searching across history
   def main(args: Array[String]) {
     parser.parse(args, DabbleRunConfig()) match {
       case Some(DabbleRunConfig(deps, res, mp, None)) =>

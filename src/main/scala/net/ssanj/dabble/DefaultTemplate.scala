@@ -26,3 +26,5 @@ trait DefaultTemplate {
                               s"${templateVersion}${templateLineSeparator}"      +
                               s"${templateScalaVersion}"
 }
+
+object DefaultTemplate extends DefaultTemplate

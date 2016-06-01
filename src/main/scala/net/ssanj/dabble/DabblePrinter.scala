@@ -138,3 +138,5 @@ trait DabblePrinter {
         mkString(" ")
   }
 }
+
+object DabblePrinter extends DabblePrinter
