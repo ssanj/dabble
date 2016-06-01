@@ -56,11 +56,6 @@ trait Executor {
     }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
   }
 
-  def readHistoryFile(): HistoryLinesOr = {
-    val lines = readFile(dabbleHome.history)
-    readHistory(historyParser.parse(_, DabbleRunConfig()))(lines)
-  }
-
   def readFile(filename: Path): Seq[String] = {
       Try(read.lines(filename, "UTF-8")).
         toOption.
@@ -77,11 +72,8 @@ trait Executor {
                                  resolvers: Seq[Resolver],
                                  mpVersion: Option[String],
                                  hlaw: HistoryLinesAndWarnings): Outcome = {
-    // val historyLines   = readHistoryFile() //Seq[ValidationNel[String, DabbleHistoryLine]]
     val newHistoryLine = DabbleHistoryLine(nels(dependencies.head, dependencies.tail:_*), resolvers, mpVersion)
 
-    // val oldHistoryLines: Seq[DabbleHistoryLine] = historyLines.collect { case Success(lines) => lines }
-    // val historyLineWarnings: Seq[String] = historyLines.collect { case Failure(warnings) => warnings.list.toList }.flatten
     import scala.collection.mutable.LinkedHashSet
     val unqiueHistoryLines = LinkedHashSet() ++ (newHistoryLine +: hlaw.onlyThat.getOrElse(Seq.empty))
 
