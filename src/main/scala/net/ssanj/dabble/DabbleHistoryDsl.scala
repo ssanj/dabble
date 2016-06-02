@@ -3,7 +3,11 @@ package net.ssanj.dabble
 import scala.util.Try
 
 import scalaz._
+import scalaz.syntax.either._
 import scalaz.Free._
+
+import ExecutionResult2._
+import DabbleHistory._
 
 //Free only encapsulates side effects. Not logic. Logic is performed in the interpreter.
 //Free Scipts have to return a Free[DabbleHistory, ?]
@@ -23,37 +27,56 @@ object DabbleHistoryDslDef {
     def fromOneBased(value: Int): OneBased = OneBased(Math.max(MIN, value))
   }
 
-  sealed trait HistoryChoice
-  final case object ExitHistory extends HistoryChoice //q
-  final case class UnhandledInput(value: String) extends HistoryChoice //q
-  final case class HistoryLine(line: OneBased) extends HistoryChoice //valid menu index
+  type ErrorOr[A] = String \/ A
 
   sealed trait DabbleHistoryDsl[A]
-  final case class ReadHistoryFile(filename: String) extends DabbleHistoryDsl[Seq[String]]
-  final case class PrintItem(message: String) extends DabbleHistoryDsl[Unit]
-  final case class ReadUserInput(prompt: String) extends DabbleHistoryDsl[String]
-  final case class Exit(code: Int) extends DabbleHistoryDsl[Unit]
+  final case class ReadFile(filename: String) extends DabbleHistoryDsl[ErrorOr[Seq[String]]]
+  final case class WriteFile(filename: String, lines: Seq[String]) extends DabbleHistoryDsl[ErrorOr[Unit]]
+  final case class FileExists(filename: String) extends DabbleHistoryDsl[Boolean]
+
+  final case class Log(message: String) extends DabbleHistoryDsl[Unit]
+  // final case class LogInfo(message: String) extends DabbleHistoryDsl[Unit]
+  // final case class LogWarning(message: String) extends DabbleHistoryDsl[Unit]
+  // final case class LogError(message: String, errorOp: Option[Throwable]) extends DabbleHistoryDsl[Unit]
+
+  final case class ReadInput(prompt: String) extends DabbleHistoryDsl[String]
+  final case class SystemProp(key: String) extends DabbleHistoryDsl[ErrorOr[String]]
+  final case class CallProcess(filename: String, arguments: String, workingDir: String) extends DabbleHistoryDsl[ErrorOr[ExecutionResult2]]
+  final case class Exit(er: ExecutionResult2) extends DabbleHistoryDsl[Unit]
+  final case object NoOp extends DabbleHistoryDsl[Unit]
 
   type DabbleScript[A] = Free[DabbleHistoryDsl, A]
 
   //2. Lift functions
-  def readHistoryFile(filename: String): DabbleScript[Seq[String]] =
-    liftF(ReadHistoryFile(filename))
+  def readFile(filename: String): DabbleScript[ErrorOr[Seq[String]]] =
+    liftF(ReadFile(filename))
 
-  def printItem(message: String): DabbleScript[Unit] = liftF(PrintItem(message))
+  def writeFile(filename: String, lines: Seq[String]): DabbleScript[ErrorOr[Unit]] =
+    liftF(WriteFile(filename, lines))
 
-  def readUserInput(prompt: String): DabbleScript[String] = liftF(ReadUserInput(prompt))
+  def fileExists(filename: String): DabbleScript[Boolean] =
+    liftF(FileExists(filename))
 
-  def exit(code: Int): DabbleScript[Unit] = liftF(Exit(code))
+  def log(message: String): DabbleScript[Unit] = liftF(Log(message))
+
+  def readInput(prompt: String): DabbleScript[String] = liftF(ReadInput(prompt))
+
+  def systemProp(key: String): DabbleScript[ErrorOr[String]] = liftF(SystemProp(key))
+
+  def callProcess(filename: String, arguments: String, workingDir: String):
+    DabbleScript[ErrorOr[ExecutionResult2]] = liftF(CallProcess(filename, arguments, workingDir))
+
+  def exit(er: ExecutionResult2): DabbleScript[Unit] = liftF(Exit(er))
+
+  val noOp: DabbleScript[Unit] = liftF(NoOp)
 
   //3. Compose functions
   def getUserChoice(prompt: String,
-                    launchDabble: DabbleHistoryLine => Unit,
                     hLines: Seq[DabbleHistoryLine]): DabbleScript[Unit] = {
 
-    readUserInput(prompt).
+    readInput(prompt).
       flatMap {
-            case "q" => exit(0)
+            case "q" => exit(withResult(SuccessfulAction))
             case in =>
               import OneBased._
 
@@ -61,38 +84,101 @@ object DabbleHistoryDslDef {
 
               Try(in.toInt).
                 filter(maxLines.includes).
-                map{ line =>
-                  launchDabble(hLines(fromOneBased(line).toZeroBased))
-                  exit(0)
-                }.
-                getOrElse(getUserChoice(prompt, launchDabble, hLines))
+                map(line => launchDabble(hLines(fromOneBased(line).toZeroBased))).
+                getOrElse(getUserChoice(prompt, hLines))
       }
   }
 
+  //TODO: We need the HLAW (history lines read)
+  def launchDabble(line: DabbleHistoryLine): DabbleScript[Unit] = ???
+
   def noHistory: DabbleScript[Unit] = for {
-    _ <- printItem("You have not made history.")
-    _ <- printItem("Dabble writes out a history line when you successfully load a dependency and exit.")
-    _ <- exit(0)
+    _ <- log("You have not made history.")
+    _ <- log("Dabble writes out a history line when you successfully load a dependency and exit.")
+    _ <- exit(withResult(SuccessfulAction))
   } yield ()
 
-  def chooseHistory(prompt: String,
-                    hLines: Seq[DabbleHistoryLine],
-                    menu: String,
-                    launchDabble: DabbleHistoryLine => Unit): DabbleScript[Unit] = {
+  def chooseHistory(searchTerm: Option[String],
+                    prompt: String,
+                    hlaw: HistoryLinesAndWarnings,
+                    hMenu: Seq[DabbleHistoryLine] => String): DabbleScript[Unit] = {
+
+     val hLines = hlaw.onlyThat.getOrElse(Seq.empty)
      for {
-       _      <- printItem(menu)
-       _      <- getUserChoice(prompt, launchDabble, hLines)
+       _      <- if (hLines.isEmpty) noHistory
+                 else {
+                  searchTerm match {
+                    case Some(term) =>
+                      val matchedLines =
+                        hLines.filter {
+                            case DabbleHistoryLine(deps, _, _) =>
+                              !deps.list.filter {
+                                case ScalaVersionSupplied(org, name, _, _) =>
+                                  org.contains(term) || name.contains(term)
+                                case ScalaVersionDerived(org, name, _, _) =>
+                                  org.contains(term) || name.contains(term)
+                              }.isEmpty
+                        }
+                        if (matchedLines.isEmpty) {
+                          for {
+                            _ <- log(s"Could not find matches for: $term.")
+                            _ <- promptUserToShowFullHistoryOrQuit(prompt, hMenu, hLines)
+                           } yield ()
+                        } else showHistoryMenuAndPromptUser(prompt, hMenu, matchedLines)
+
+                    case None => showHistoryMenuAndPromptUser(prompt, hMenu, hLines)
+                  }
+                }
      } yield ()
   }
 
-  //4. Program
-  def historyProgram(historyFileName: String,
-                     hParser: String => DabbleHistoryLine,
+  def newlines(n: Int): DabbleScript[String] =
+    systemProp("line.separator") map {
+      case -\/(error) => "\n"
+      case \/-(nl) => List.fill(n)(nl).mkString
+    }
+
+  def promptUserToShowFullHistoryOrQuit(fullHistoryPrompt: String,
+                                        hMenu: Seq[DabbleHistoryLine] => String,
+                                        fullHistory: Seq[DabbleHistoryLine]): DabbleScript[Unit] = for {
+    input <- readInput(s"Select 'f' for full history or 'q' to quit.")
+    _ <- input match {
+      case "f" => showHistoryMenuAndPromptUser(fullHistoryPrompt, hMenu, fullHistory)
+      case "q" => exit(withResult(SuccessfulAction))
+      case _ => promptUserToShowFullHistoryOrQuit(fullHistoryPrompt, hMenu, fullHistory)
+    }
+  } yield ()
+
+  def showHistoryMenuAndPromptUser(prompt: String,
+                                   hMenu: Seq[DabbleHistoryLine] => String,
+                                   hLines: Seq[DabbleHistoryLine]): DabbleScript[Unit] = {
+    log(hMenu(hLines)).flatMap(_ => getUserChoice(prompt, hLines))
+  }
+
+  def readHistoryFile(historyFileName: String, argParser: CommandlineParser): DabbleScript[ErrorOr[HistoryLinesAndWarnings]] = for {
+    linesE <- readFile(historyFileName)
+    hfStatus = linesE match {
+      case -\/(e) => e.left
+      case \/-(lines) => (readHistoryWithWarnings(argParser)(lines)).right
+    }
+
+  } yield hfStatus
+
+  def logErrorAndExit(message: String): DabbleScript[Unit] = {
+    log(message).flatMap(_ => exit(withResult(UnsuccessfulAction)))
+  }
+
+  // //4. Program
+  def historyProgram(searchTerm: Option[String],
+                     historyFileName: String,
+                     argParser: CommandlineParser,
                      hMenu: Seq[DabbleHistoryLine] => String,
-                     prompt: String,
-                     launchDabble: DabbleHistoryLine => Unit): DabbleScript[Unit] = for {
-    lines <- readHistoryFile(historyFileName)
-    hLines = lines.map(hParser)
-    _ <-   if (hLines.nonEmpty) chooseHistory(prompt, hLines, hMenu(hLines), launchDabble) else noHistory
+                     prompt: String): DabbleScript[Unit] = for {
+    hasHistoryFile <- fileExists(historyFileName)
+    _ <- if (!hasHistoryFile) noHistory
+         else readHistoryFile(historyFileName, argParser).flatMap {
+              case -\/(error) => logErrorAndExit(s"could not read history file: $historyFileName due to: $error")
+              case \/-(hlaw) => chooseHistory(searchTerm, prompt, hlaw, hMenu)
+         }
   } yield ()
 }

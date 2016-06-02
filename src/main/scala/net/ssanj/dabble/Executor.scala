@@ -17,8 +17,6 @@ import TerminalSupport._
 trait Executor {
   type Outcome = Seq[String] \&/ Unit
 
-  case class ExecutionResult(message: Option[String], code: Int)
-
   def exit(result: ExecutionResult): Unit = {
     result.message.foreach(m => log(m))
     System.exit(result.code)
