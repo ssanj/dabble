@@ -4,6 +4,7 @@ import scala.util.Try
 
 import scalaz._
 import scalaz.syntax.either._
+import scalaz.syntax.bind._
 import scalaz.Free._
 
 import ExecutionResult2._
@@ -70,12 +71,6 @@ object DabbleHistoryDslDef {
 
   val noOp: DabbleScript[Unit] = liftF(NoOp)
 
-  def apply2[A, B, C](scriptA: DabbleScript[A],
-                      scriptB: DabbleScript[B])(f: (A, B) => C): DabbleScript[C] = for {
-                        a <- scriptA
-                        b <- scriptB
-                      } yield f(a, b)
-
   def liftDS[A](value: A): DabbleScript[A] = noOp.map(_ => value)
 
   type HistoryMenu = Seq[DabbleHistoryLine] => String
@@ -136,8 +131,8 @@ object DabbleHistoryDslDef {
   def showAlternateOptions(prompt: String,
                            hMenu: HistoryMenu,
                            hLines: Seq[DabbleHistoryLine])(term: String): DabbleScript[HistoryOption] =
-    log(s"Could not find matches for: $term.").flatMap(_ =>
-      promptUserToShowFullHistoryOrQuit(prompt, hMenu, hLines))
+    log(s"Could not find matches for: $term.") >>
+      promptUserToShowFullHistoryOrQuit(prompt, hMenu, hLines)
 
   def findBySearchTerm(hLines: Seq[DabbleHistoryLine], term: String): Seq[DabbleHistoryLine] = {
     hLines.filter {
@@ -171,8 +166,7 @@ object DabbleHistoryDslDef {
   def showHistoryMenuAndPromptUser(prompt: String,
                                    hMenu: HistoryMenu,
                                    hLines: Seq[DabbleHistoryLine]): DabbleScript[HistoryOption] = {
-    //TODO: replace with >>
-    log(hMenu(hLines)).flatMap(_ => getUserChoice(prompt, hLines))
+    log(hMenu(hLines)) >> getUserChoice(prompt, hLines)
   }
 
   def readHistoryFile(historyFileName: String, argParser: CommandlineParser): DabbleScript[ErrorOr[HistoryLinesAndWarnings]] = for {
@@ -184,9 +178,15 @@ object DabbleHistoryDslDef {
 
   } yield hfStatus
 
-  def logErrorAndExit(message: String): DabbleScript[ExecutionResult2] = {
-    log(message).map(_ => withResult(UnsuccessfulAction))
+  def exitWithError(message: String): DabbleScript[ExecutionResult2] = {
+    liftDS(ExecutionResult2(Option(message), UnsuccessfulAction))
   }
+
+  def saveHistoryFile(filename: String, selection: DabbleHistoryLine, hLines: Seq[DabbleHistoryLine]):
+    DabbleScript[ErrorOr[Unit]] = {
+      //this would do the uniqueness checking etc.
+      ???
+    }
 
   // //4. Program
   def historyProgram(searchTerm: Option[String],
@@ -197,11 +197,20 @@ object DabbleHistoryDslDef {
     hasHistoryFile <- fileExists(historyFileName)
     er2 <- if (!hasHistoryFile) noHistory.map(_ => withResult(SuccessfulAction))
            else readHistoryFile(historyFileName, argParser).map {
-              case -\/(error) => logErrorAndExit(s"could not read history file: $historyFileName due to: $error")
+              case -\/(error) => exitWithError(s"could not read history file: $historyFileName due to: $error")
               case \/-(hlaw) =>
-                chooseHistory(searchTerm, prompt, hlaw, hMenu) map {
+                chooseHistory(searchTerm, prompt, hlaw, hMenu).map {
                   case QuitHistory => withResult(SuccessfulAction)
-                  case HistorySelection(line) => launchDabble(line)
+                  case HistorySelection(line) =>
+                    launchDabble(line).flatMap {
+                      case er@ExecutionResult2(_, SuccessfulAction) =>
+                        saveHistoryFile(historyFileName, line, hlaw.onlyThat.getOrElse(Seq.empty)) map {
+                          case -\/(error) => er.copy(message = Option(error)) //TODO: append error
+                          case \/-(_) => er
+                        }
+
+                      case er => liftDS(er)
+                    }
                 }
            }
     //do something with the execution result. Log it?
