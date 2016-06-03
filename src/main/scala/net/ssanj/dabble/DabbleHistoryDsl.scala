@@ -70,6 +70,16 @@ object DabbleHistoryDslDef {
 
   val noOp: DabbleScript[Unit] = liftF(NoOp)
 
+  def apply2[A, B, C](scriptA: DabbleScript[A],
+                      scriptB: DabbleScript[B])(f: (A, B) => C): DabbleScript[C] = for {
+                        a <- scriptA
+                        b <- scriptB
+                      } yield f(a, b)
+
+  def liftDS[A](value: A): DabbleScript[A] = noOp.map(_ => value)
+
+  type HistoryMenu = Seq[DabbleHistoryLine] => String
+
   //3. Compose functions
   def getUserChoice(prompt: String,
                     hLines: Seq[DabbleHistoryLine]): DabbleScript[Unit] = {
@@ -90,6 +100,7 @@ object DabbleHistoryDslDef {
   }
 
   //TODO: We need the HLAW (history lines read)
+  //TODO: This should actually return a ExecutionResult2. If it succeeds then we can save history.
   def launchDabble(line: DabbleHistoryLine): DabbleScript[Unit] = ???
 
   def noHistory: DabbleScript[Unit] = for {
@@ -101,35 +112,41 @@ object DabbleHistoryDslDef {
   def chooseHistory(searchTerm: Option[String],
                     prompt: String,
                     hlaw: HistoryLinesAndWarnings,
-                    hMenu: Seq[DabbleHistoryLine] => String): DabbleScript[Unit] = {
+                    hMenu: HistoryMenu): DabbleScript[Unit] = {
 
      val hLines = hlaw.onlyThat.getOrElse(Seq.empty)
      for {
-       _      <- if (hLines.isEmpty) noHistory
-                 else {
-                  searchTerm match {
-                    case Some(term) =>
-                      val matchedLines =
-                        hLines.filter {
-                            case DabbleHistoryLine(deps, _, _) =>
-                              !deps.list.filter {
-                                case ScalaVersionSupplied(org, name, _, _) =>
-                                  org.contains(term) || name.contains(term)
-                                case ScalaVersionDerived(org, name, _, _) =>
-                                  org.contains(term) || name.contains(term)
-                              }.isEmpty
-                        }
-                        if (matchedLines.isEmpty) {
-                          for {
-                            _ <- log(s"Could not find matches for: $term.")
-                            _ <- promptUserToShowFullHistoryOrQuit(prompt, hMenu, hLines)
-                           } yield ()
-                        } else showHistoryMenuAndPromptUser(prompt, hMenu, matchedLines)
+       _ <- if (hLines.isEmpty) noHistory
+            else {
+              searchTerm match {
+                case Some(term) =>
+                  val matchedLines = findBySearchTerm(hLines, term)
+                  if (matchedLines.isEmpty) showAlternateOptions(prompt, hMenu, hLines)(term)
+                  else showHistoryMenuAndPromptUser(prompt, hMenu, matchedLines)
 
-                    case None => showHistoryMenuAndPromptUser(prompt, hMenu, hLines)
-                  }
-                }
+                case None => showHistoryMenuAndPromptUser(prompt, hMenu, hLines)
+              }
+            }
      } yield ()
+  }
+
+  def showAlternateOptions(prompt: String,
+                           hMenu: HistoryMenu,
+                           hLines: Seq[DabbleHistoryLine])(term: String): DabbleScript[Unit] = for {
+    _ <- log(s"Could not find matches for: $term.")
+    _ <- promptUserToShowFullHistoryOrQuit(prompt, hMenu, hLines)
+ } yield ()
+
+  def findBySearchTerm(hLines: Seq[DabbleHistoryLine], term: String): Seq[DabbleHistoryLine] = {
+    hLines.filter {
+        case DabbleHistoryLine(deps, _, _) =>
+          !deps.list.filter {
+            case ScalaVersionSupplied(org, name, _, _) =>
+              org.contains(term) || name.contains(term)
+            case ScalaVersionDerived(org, name, _, _) =>
+              org.contains(term) || name.contains(term)
+          }.isEmpty
+    }
   }
 
   def newlines(n: Int): DabbleScript[String] =
@@ -139,7 +156,7 @@ object DabbleHistoryDslDef {
     }
 
   def promptUserToShowFullHistoryOrQuit(fullHistoryPrompt: String,
-                                        hMenu: Seq[DabbleHistoryLine] => String,
+                                        hMenu: HistoryMenu,
                                         fullHistory: Seq[DabbleHistoryLine]): DabbleScript[Unit] = for {
     input <- readInput(s"Select 'f' for full history or 'q' to quit.")
     _ <- input match {
@@ -150,7 +167,7 @@ object DabbleHistoryDslDef {
   } yield ()
 
   def showHistoryMenuAndPromptUser(prompt: String,
-                                   hMenu: Seq[DabbleHistoryLine] => String,
+                                   hMenu: HistoryMenu,
                                    hLines: Seq[DabbleHistoryLine]): DabbleScript[Unit] = {
     log(hMenu(hLines)).flatMap(_ => getUserChoice(prompt, hLines))
   }
@@ -172,7 +189,7 @@ object DabbleHistoryDslDef {
   def historyProgram(searchTerm: Option[String],
                      historyFileName: String,
                      argParser: CommandlineParser,
-                     hMenu: Seq[DabbleHistoryLine] => String,
+                     hMenu: HistoryMenu,
                      prompt: String): DabbleScript[Unit] = for {
     hasHistoryFile <- fileExists(historyFileName)
     _ <- if (!hasHistoryFile) noHistory
