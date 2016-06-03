@@ -80,13 +80,17 @@ object DabbleHistoryDslDef {
 
   type HistoryMenu = Seq[DabbleHistoryLine] => String
 
+  sealed trait HistoryOption
+  final case object QuitHistory extends HistoryOption
+  final case class HistorySelection(line: DabbleHistoryLine) extends HistoryOption
+
   //3. Compose functions
   def getUserChoice(prompt: String,
-                    hLines: Seq[DabbleHistoryLine]): DabbleScript[Unit] = {
+                    hLines: Seq[DabbleHistoryLine]): DabbleScript[HistoryOption] = {
 
     readInput(prompt).
       flatMap {
-            case "q" => exit(withResult(SuccessfulAction))
+            case "q" => liftDS[HistoryOption](QuitHistory)
             case in =>
               import OneBased._
 
@@ -94,48 +98,46 @@ object DabbleHistoryDslDef {
 
               Try(in.toInt).
                 filter(maxLines.includes).
-                map(line => launchDabble(hLines(fromOneBased(line).toZeroBased))).
+                map(line => liftDS[HistoryOption](HistorySelection(hLines(fromOneBased(line).toZeroBased)))).
                 getOrElse(getUserChoice(prompt, hLines))
       }
   }
 
   //TODO: We need the HLAW (history lines read)
   //TODO: This should actually return a ExecutionResult2. If it succeeds then we can save history.
-  def launchDabble(line: DabbleHistoryLine): DabbleScript[Unit] = ???
+  def launchDabble(line: DabbleHistoryLine): DabbleScript[ExecutionResult2] = ???
 
-  def noHistory: DabbleScript[Unit] = for {
+  def noHistory: DabbleScript[HistoryOption] = for {
     _ <- log("You have not made history.")
     _ <- log("Dabble writes out a history line when you successfully load a dependency and exit.")
-    _ <- exit(withResult(SuccessfulAction))
-  } yield ()
+  } yield QuitHistory
 
   def chooseHistory(searchTerm: Option[String],
                     prompt: String,
                     hlaw: HistoryLinesAndWarnings,
-                    hMenu: HistoryMenu): DabbleScript[Unit] = {
+                    hMenu: HistoryMenu): DabbleScript[HistoryOption] = {
 
      val hLines = hlaw.onlyThat.getOrElse(Seq.empty)
      for {
-       _ <- if (hLines.isEmpty) noHistory
-            else {
-              searchTerm match {
-                case Some(term) =>
-                  val matchedLines = findBySearchTerm(hLines, term)
-                  if (matchedLines.isEmpty) showAlternateOptions(prompt, hMenu, hLines)(term)
-                  else showHistoryMenuAndPromptUser(prompt, hMenu, matchedLines)
+       ho <- if (hLines.isEmpty) noHistory
+             else {
+               searchTerm match {
+                 case Some(term) =>
+                   val matchedLines = findBySearchTerm(hLines, term)
+                   if (matchedLines.isEmpty) showAlternateOptions(prompt, hMenu, hLines)(term)
+                   else showHistoryMenuAndPromptUser(prompt, hMenu, matchedLines)
 
-                case None => showHistoryMenuAndPromptUser(prompt, hMenu, hLines)
-              }
-            }
-     } yield ()
+                 case None => showHistoryMenuAndPromptUser(prompt, hMenu, hLines)
+               }
+             }
+     } yield ho
   }
 
   def showAlternateOptions(prompt: String,
                            hMenu: HistoryMenu,
-                           hLines: Seq[DabbleHistoryLine])(term: String): DabbleScript[Unit] = for {
-    _ <- log(s"Could not find matches for: $term.")
-    _ <- promptUserToShowFullHistoryOrQuit(prompt, hMenu, hLines)
- } yield ()
+                           hLines: Seq[DabbleHistoryLine])(term: String): DabbleScript[HistoryOption] =
+    log(s"Could not find matches for: $term.").flatMap(_ =>
+      promptUserToShowFullHistoryOrQuit(prompt, hMenu, hLines))
 
   def findBySearchTerm(hLines: Seq[DabbleHistoryLine], term: String): Seq[DabbleHistoryLine] = {
     hLines.filter {
@@ -157,18 +159,19 @@ object DabbleHistoryDslDef {
 
   def promptUserToShowFullHistoryOrQuit(fullHistoryPrompt: String,
                                         hMenu: HistoryMenu,
-                                        fullHistory: Seq[DabbleHistoryLine]): DabbleScript[Unit] = for {
+                                        fullHistory: Seq[DabbleHistoryLine]): DabbleScript[HistoryOption] = for {
     input <- readInput(s"Select 'f' for full history or 'q' to quit.")
-    _ <- input match {
+    ho <- input match {
       case "f" => showHistoryMenuAndPromptUser(fullHistoryPrompt, hMenu, fullHistory)
-      case "q" => exit(withResult(SuccessfulAction))
+      case "q" => liftDS(QuitHistory)
       case _ => promptUserToShowFullHistoryOrQuit(fullHistoryPrompt, hMenu, fullHistory)
     }
-  } yield ()
+  } yield ho
 
   def showHistoryMenuAndPromptUser(prompt: String,
                                    hMenu: HistoryMenu,
-                                   hLines: Seq[DabbleHistoryLine]): DabbleScript[Unit] = {
+                                   hLines: Seq[DabbleHistoryLine]): DabbleScript[HistoryOption] = {
+    //TODO: replace with >>
     log(hMenu(hLines)).flatMap(_ => getUserChoice(prompt, hLines))
   }
 
@@ -181,8 +184,8 @@ object DabbleHistoryDslDef {
 
   } yield hfStatus
 
-  def logErrorAndExit(message: String): DabbleScript[Unit] = {
-    log(message).flatMap(_ => exit(withResult(UnsuccessfulAction)))
+  def logErrorAndExit(message: String): DabbleScript[ExecutionResult2] = {
+    log(message).map(_ => withResult(UnsuccessfulAction))
   }
 
   // //4. Program
@@ -192,10 +195,15 @@ object DabbleHistoryDslDef {
                      hMenu: HistoryMenu,
                      prompt: String): DabbleScript[Unit] = for {
     hasHistoryFile <- fileExists(historyFileName)
-    _ <- if (!hasHistoryFile) noHistory
-         else readHistoryFile(historyFileName, argParser).flatMap {
+    er2 <- if (!hasHistoryFile) noHistory.map(_ => withResult(SuccessfulAction))
+           else readHistoryFile(historyFileName, argParser).map {
               case -\/(error) => logErrorAndExit(s"could not read history file: $historyFileName due to: $error")
-              case \/-(hlaw) => chooseHistory(searchTerm, prompt, hlaw, hMenu)
-         }
+              case \/-(hlaw) =>
+                chooseHistory(searchTerm, prompt, hlaw, hMenu) map {
+                  case QuitHistory => withResult(SuccessfulAction)
+                  case HistorySelection(line) => launchDabble(line)
+                }
+           }
+    //do something with the execution result. Log it?
   } yield ()
 }
