@@ -13,6 +13,8 @@ import DabbleHistory._
 //Free only encapsulates side effects. Not logic. Logic is performed in the interpreter.
 //Free Scipts have to return a Free[DabbleHistory, ?]
 
+//TODO: Figure out how to modularise this class. It's too long. We need to combine
+//classes to get this much information, alternatively import them.
 object DabbleHistoryDslDef {
 
   //1. Dsl
@@ -62,6 +64,7 @@ object DabbleHistoryDslDef {
 
   def readInput(prompt: String): DabbleScript[String] = liftF(ReadInput(prompt))
 
+  //TODO: Do we need this or can we leave this to the interpreter?
   def systemProp(key: String): DabbleScript[ErrorOr[String]] = liftF(SystemProp(key))
 
   def callProcess(filename: String, arguments: String, workingDir: String):
@@ -146,6 +149,7 @@ object DabbleHistoryDslDef {
     }
   }
 
+  //TODO: Do we need this or can we leave this to the interpreter?
   def newlines(n: Int): DabbleScript[String] =
     systemProp("line.separator") map {
       case -\/(error) => "\n"
@@ -182,18 +186,66 @@ object DabbleHistoryDslDef {
     liftDS(ExecutionResult2(Option(message), UnsuccessfulAction))
   }
 
-  def saveHistoryFile(filename: String, selection: DabbleHistoryLine, hLines: Seq[DabbleHistoryLine]):
+  def saveHistoryFile(filename: String, selection: DabbleHistoryLine, hLines: Seq[DabbleHistoryLine],
+    historyPrinter: DabbleHistoryLine => String):
     DabbleScript[ErrorOr[Unit]] = {
-      //this would do the uniqueness checking etc.
-      ???
+      import scala.collection.mutable.LinkedHashSet
+      val uniqueHLines = LinkedHashSet() ++ (selection +: hLines)
+      writeFile(filename, uniqueHLines.map(historyPrinter).toSeq)
     }
+
+
+  def dsBind[A, B](ds: DabbleScript[A], f: A => DabbleScript[B]): DabbleScript[B] = ds.flatMap(f)
+
+  def erBind(er1: DabbleScript[ExecutionResult2], f: ExecutionResult2 => DabbleScript[ExecutionResult2]) =
+    dsBind[ExecutionResult2, ExecutionResult2](er1, {
+        case er@ExecutionResult2(_, SuccessfulAction) => f(er)
+        case er => er1
+      })
+
+ /** Combines a [[DabbleScript]] that contains an [[ExecutionResult2]] with another that contains an
+   * [[ErrorOr[A]]].
+   * The success combination rules are as follows:
+   * 1. If dser is a [[SuccessfulAction]] then run dseo.
+   * 1. If dseo returns an error then create an [[ExecutionResult2]] with the error and an [[UnsuccessfulAction]].
+   * 1. If dseo return a success then return the original [[ExecutionResult2]].
+   *
+   * The failure combination rules are as follows:
+   * 1. If dser results in an [[UnsuccessfulAction]] then return the unsuccessful [[ExecutionResult2]].
+   */
+ def combineEV[A](dser: DabbleScript[ExecutionResult2], dseo: => DabbleScript[ErrorOr[A]]):
+  DabbleScript[ExecutionResult2] = for {
+   er1 <- dser
+   er2 <- er1 match {
+    case er@ExecutionResult2(_, SuccessfulAction) => dseo map {
+      case -\/(error) => er1.copy(message = Option(error))
+      case \/-(_) => er1
+    }
+    case _ => dser
+   }
+ } yield er2
+
+ def launchDabbleAndSaveHistory(historyFileName: String,
+                                line: DabbleHistoryLine,
+                                hlaw: HistoryLinesAndWarnings,
+                                historyPrinter: DabbleHistoryLine => String):DabbleScript[ExecutionResult2] = {
+    combineEV(launchDabble(line),
+              saveHistoryFile(historyFileName,
+                              line,
+                              hlaw.onlyThat.getOrElse(Seq.empty),
+                              historyPrinter))
+ }
 
   // //4. Program
   def historyProgram(searchTerm: Option[String],
                      historyFileName: String,
                      argParser: CommandlineParser,
                      hMenu: HistoryMenu,
-                     prompt: String): DabbleScript[Unit] = for {
+                     prompt: String,
+                     historyPrinter: DabbleHistoryLine => String): DabbleScript[Unit] = for {
+    //TODO: Simplify readHistoryFile to return Seq.empty if the history file is not found.
+    //TODO: readHistoryFile is going to be common. Pull it out.
+    //TODO: Do we need to distinguish between an empty history file and an absent one?
     hasHistoryFile <- fileExists(historyFileName)
     er2 <- if (!hasHistoryFile) noHistory.map(_ => withResult(SuccessfulAction))
            else readHistoryFile(historyFileName, argParser).map {
@@ -202,17 +254,14 @@ object DabbleHistoryDslDef {
                 chooseHistory(searchTerm, prompt, hlaw, hMenu).map {
                   case QuitHistory => withResult(SuccessfulAction)
                   case HistorySelection(line) =>
-                    launchDabble(line).flatMap {
-                      case er@ExecutionResult2(_, SuccessfulAction) =>
-                        saveHistoryFile(historyFileName, line, hlaw.onlyThat.getOrElse(Seq.empty)) map {
-                          case -\/(error) => er.copy(message = Option(error)) //TODO: append error
-                          case \/-(_) => er
-                        }
-
-                      case er => liftDS(er)
-                    }
+                    launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter)
                 }
            }
-    //do something with the execution result. Log it?
+    _ <- er2 match {
+          case ExecutionResult2(_, SuccessfulAction) => noOp
+          case ExecutionResult2(errors, UnsuccessfulAction) =>
+            errors.map(e => log(s"Dabble exited with the following errors: $e")).
+                   getOrElse(log("Dabble exited with errors."))
+        }
   } yield ()
 }
