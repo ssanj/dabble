@@ -12,10 +12,11 @@ import DabbleHistory._
 
 
 import DabbleHistoryDslDef._
+import CommonCommands._
 import DependencyCommands._
 
 object HistoryDsl {
-  //1. Dsl
+
   final case class OneBased private (value: Int) {
     val toZeroBased: Int = Math.max(0, value - 1)
     def includes(n: Int): Boolean = n >= OneBased.MIN && n <= value
@@ -98,13 +99,6 @@ object HistoryCommands {
           }.isEmpty
     }
   }
-
-  //TODO: Do we need this or can we leave this to the interpreter?
-  def newlines(n: Int): DabbleScript[String] =
-    systemProp("line.separator") map {
-      case -\/(error) => "\n"
-      case \/-(nl) => List.fill(n)(nl).mkString
-    }
 
   def promptUserToShowFullHistoryOrQuit(fullHistoryPrompt: String,
                                         hMenu: HistoryMenu,

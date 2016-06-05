@@ -25,6 +25,13 @@ trait DefaultTemplate {
                               s"${templateOrganisation}${templateLineSeparator}" +
                               s"${templateVersion}${templateLineSeparator}"      +
                               s"${templateScalaVersion}"
+
+  def inMemSbtTemplateF(separator: String) =
+    s"${templateHeader}${separator}"       +
+    s"${templateName}${separator}"         +
+    s"${templateOrganisation}${separator}" +
+    s"${templateVersion}${separator}"      +
+    s"${templateScalaVersion}"
 }
 
 object DefaultTemplate extends DefaultTemplate
