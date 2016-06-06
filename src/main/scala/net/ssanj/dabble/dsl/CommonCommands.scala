@@ -8,6 +8,38 @@ import DabbleHistoryDslDef._
 import DabbleHistory._
 
 object CommonCommands {
+
+  /** Dsl for formatting content, typically with newlines without the need for accessing the
+    * platform-specific newline character. The Dsl caters for Plain text characters, newlines and
+    * composite content with newlines and/or content.
+    *
+    * @example {{{
+    *  Plain("line1") + NL + Plain("line2") + NL + Plain("line3")
+    * }}}
+    */
+  sealed trait FormattedContent {
+    def +(other: FormattedContent): Composite = Composite(this, other)
+  }
+
+  object FormattedContent {
+    def nl(n: Int): FormattedContent = {
+      n match {
+        case 2 => Composite(NL, NL)
+
+        case x if x > 2 => {
+          val Seq(one, two, t@_*) = List.fill(x)(NL)
+          t.foldLeft(Composite(one, two))(_ + _)
+        }
+
+        case _ => NL
+      }
+    }
+  }
+
+  final case class Plain(value: String) extends FormattedContent
+  case object NL extends FormattedContent
+  final case class Composite(fc1: FormattedContent, fc2: FormattedContent) extends FormattedContent
+
     //TODO: Do we need this or can we leave this to the interpreter?
   def newlinesDS(n: Int): DabbleScript[String] =
     systemProp("line.separator") map {
