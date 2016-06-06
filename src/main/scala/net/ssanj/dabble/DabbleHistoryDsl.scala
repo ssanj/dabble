@@ -67,11 +67,18 @@ object DabbleHistoryDslDef {
       })
 
  /** Combines a [[DabbleScript]] that contains an [[ExecutionResult2]] with another that contains an
-   * [[ErrorOr[A]]].
+   * [[ErrorOr[A]]] to finally return an [[ExecutionResult2]].
+   *
+   * {{{
+   * DabbleScript[ExecutionResult2] =>
+   *   DabbleScript[ErrorOr[A]] =>
+   *     DabbleScript[ExecutionResult2]
+   * }}}
    * The success combination rules are as follows:
    * 1. If dser is a [[SuccessfulAction]] then run dseo.
    * 1. If dseo returns an error then create an [[ExecutionResult2]] with the error and an [[UnsuccessfulAction]].
    * 1. If dseo return a success then return the original [[ExecutionResult2]].
+   * 1. If dser is a [[UnsuccessfulAction]] then don't return [[ExecutionResult2]] and don't run dseo.
    *
    * The failure combination rules are as follows:
    * 1. If dser results in an [[UnsuccessfulAction]] then return the unsuccessful [[ExecutionResult2]].

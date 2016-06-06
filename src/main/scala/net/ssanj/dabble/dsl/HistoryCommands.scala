@@ -117,15 +117,6 @@ object HistoryCommands {
     log(hMenu(hLines)) >> getUserChoice(prompt, hLines)
   }
 
-  def readHistoryFile(historyFileName: String, argParser: CommandlineParser): DabbleScript[ErrorOr[HistoryLinesAndWarnings]] = for {
-    linesE <- readFile(historyFileName)
-    hfStatus = linesE match {
-      case -\/(e) => e.left
-      case \/-(lines) => (readHistoryWithWarnings(argParser)(lines)).right
-    }
-
-  } yield hfStatus
-
   def exitWithError(message: String): DabbleScript[ExecutionResult2] = {
     liftDS(ExecutionResult2(Option(message), UnsuccessfulAction))
   }
