@@ -11,7 +11,7 @@ import ExecutionResult2._
 import DabbleHistory._
 
 
-import DabbleHistoryDslDef._
+import DabbleDslDef._
 import CommonCommands._
 import DependencyCommands._
 

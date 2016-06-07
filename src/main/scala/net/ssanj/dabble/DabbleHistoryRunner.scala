@@ -3,7 +3,7 @@ package net.ssanj.dabble
 // import scalaz._
 // import scalaz.Id._
 
-// import DabbleHistoryDslDef._
+// import DabbleDslDef._
 
 // class ConsoleInterpreter(historyFileContents: Seq[String]) extends (DabbleHistoryDsl ~> Id ) {
 

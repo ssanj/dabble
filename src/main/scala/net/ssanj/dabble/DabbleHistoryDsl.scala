@@ -8,27 +8,27 @@ import scalaz.Free._
 
 //TODO: Figure out how to modularise this class. It's too long. We need to combine
 //classes to get this much information, alternatively import them.
-object DabbleHistoryDslDef {
+object DabbleDslDef {
 
   type ErrorOr[A] = String \/ A
 
-  sealed trait DabbleHistoryDsl[A]
-  final case class ReadFile(filename: String) extends DabbleHistoryDsl[ErrorOr[Seq[String]]]
-  final case class WriteFile(filename: String, lines: Seq[String]) extends DabbleHistoryDsl[ErrorOr[Unit]]
-  final case class FileExists(filename: String) extends DabbleHistoryDsl[Boolean]
+  sealed trait DabbleDsl[A]
+  final case class ReadFile(filename: String) extends DabbleDsl[ErrorOr[Seq[String]]]
+  final case class WriteFile(filename: String, lines: Seq[String]) extends DabbleDsl[ErrorOr[Unit]]
+  final case class FileExists(filename: String) extends DabbleDsl[Boolean]
 
-  final case class Log(message: String) extends DabbleHistoryDsl[Unit]
-  // final case class LogInfo(message: String) extends DabbleHistoryDsl[Unit]
-  // final case class LogWarning(message: String) extends DabbleHistoryDsl[Unit]
-  // final case class LogError(message: String, errorOp: Option[Throwable]) extends DabbleHistoryDsl[Unit]
+  final case class Log(message: String) extends DabbleDsl[Unit]
+  // final case class LogInfo(message: String) extends DabbleDsl[Unit]
+  // final case class LogWarning(message: String) extends DabbleDsl[Unit]
+  // final case class LogError(message: String, errorOp: Option[Throwable]) extends DabbleDsl[Unit]
 
-  final case class ReadInput(prompt: String) extends DabbleHistoryDsl[String]
-  final case class SystemProp(key: String) extends DabbleHistoryDsl[ErrorOr[String]]
-  final case class CallProcess(filename: String, arguments: String, workingDir: String) extends DabbleHistoryDsl[ErrorOr[ExecutionResult2]]
-  final case class Exit(er: ExecutionResult2) extends DabbleHistoryDsl[Unit]
-  final case object NoOp extends DabbleHistoryDsl[Unit]
+  final case class ReadInput(prompt: String) extends DabbleDsl[String]
+  final case class SystemProp(key: String) extends DabbleDsl[ErrorOr[String]]
+  final case class CallProcess(filename: String, arguments: String, workingDir: String) extends DabbleDsl[ErrorOr[ExecutionResult2]]
+  final case class Exit(er: ExecutionResult2) extends DabbleDsl[Unit]
+  final case object NoOp extends DabbleDsl[Unit]
 
-  type DabbleScript[A] = Free[DabbleHistoryDsl, A]
+  type DabbleScript[A] = Free[DabbleDsl, A]
 
   //2. Lift functions
   def readFile(filename: String): DabbleScript[ErrorOr[Seq[String]]] =

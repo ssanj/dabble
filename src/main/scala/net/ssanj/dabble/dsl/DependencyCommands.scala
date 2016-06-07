@@ -6,7 +6,7 @@ import ammonite.ops._
 import scalaz._
 import scalaz.syntax.bind._
 import DabbleHistory._
-import DabbleHistoryDslDef._
+import DabbleDslDef._
 import ExecutionResult2._
 import DabblePaths._
 import DefaultTemplate._
@@ -152,26 +152,27 @@ object DependencyCommands {
       }
     }
 
+
   //program
-  def loadSbtConsole(historyFileName: String,
-                     line: DabbleHistoryLine,
-                     argParser: CommandlineParser,
-                     hlaw: HistoryLinesAndWarnings,
-                     historyPrinter: DabbleHistoryLine => String): DabbleScript[Unit] = for {
-    hasHistoryFile <- fileExists(historyFileName)
-    er2 <- if (!hasHistoryFile)
-            launchDabbleAndSaveHistory(historyFileName, line, \&/.That(Seq.empty), historyPrinter)
-           else readHistoryFile(historyFileName, argParser).flatMap {
-              case -\/(error) => liftDS(
-                                    ExecutionResult2(
-                                      Option(s"could not read history file: $historyFileName due to: $error"),
-                                      UnsuccessfulAction))
-              case \/-(hlaw) => launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter)
-           }
+  def launchSbtConsole(historyFileName: String,
+                       line: DabbleHistoryLine,
+                       argParser: CommandlineParser,
+                       historyPrinter: DabbleHistoryLine => String): DabbleScript[Unit] = for {
+    er2 <- loadHistoryFile(historyFileName, argParser).flatMap {
+            case -\/(error) =>
+              liftDS(ExecutionResult2(
+                      Option(s"could not read history file: $historyFileName due to: $error"),
+                      UnsuccessfulAction))
+            case \/-(hlaw) => launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter)
+    }
+
     _ <- er2 match {
-      case ExecutionResult2(_, SuccessfulAction) => log(s"Dabble completed successfully")
-      case ExecutionResult2(Some(error), UnsuccessfulAction) => log(s"Dabble failed with the following error: $error")
-      case ExecutionResult2(None, UnsuccessfulAction) => log(s"Dabble failed with errors.")
+      case ExecutionResult2(_, SuccessfulAction) =>
+        log(s"Dabble completed successfully") >> exit(er2)
+      case ExecutionResult2(Some(error), UnsuccessfulAction) =>
+        log(s"Dabble failed with the following error: $error") >> exit(er2)
+      case ExecutionResult2(None, UnsuccessfulAction) =>
+        log(s"Dabble failed with errors.") >> exit(er2)
     }
   } yield ()
 }

@@ -4,7 +4,7 @@ package dsl
 import scalaz._
 import scalaz.syntax.either._
 
-import DabbleHistoryDslDef._
+import DabbleDslDef._
 import DabbleHistory._
 
 object CommonCommands {
@@ -55,6 +55,12 @@ object CommonCommands {
     }
 
   } yield hfStatus
+
+  def loadHistoryFile(historyFileName: String, argParser: CommandlineParser): DabbleScript[ErrorOr[HistoryLinesAndWarnings]] = for {
+    hasHistoryFile <- fileExists(historyFileName)
+    hlawE <- if (!hasHistoryFile) liftDS(\&/.That(Seq.empty).right[String])
+             else readHistoryFile(historyFileName, argParser)
+  } yield hlawE
 
 }
 
