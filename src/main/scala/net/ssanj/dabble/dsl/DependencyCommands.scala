@@ -117,7 +117,7 @@ object DependencyCommands {
   def useInMemoryTemplate: DabbleScript[String] = for {
         _  <- log("Using in-memory sbt template. Create a build.sbt file in ~/.dabble/ to override.")
         nl <- newlinesDS(2)
-  } yield inMemSbtTemplateF(nl)
+  } yield inMemSbtTemplate(nl)
 
   def logDabbleVersion: DabbleScript[Unit] = {
     log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
@@ -139,6 +139,7 @@ object DependencyCommands {
   def saveHistoryFile(filename: String, selection: DabbleHistoryLine, hlaw: HistoryLinesAndWarnings,
     historyPrinter: DabbleHistoryLine => String):
     DabbleScript[ErrorOr[Unit]] = {
+      // println(s"hlaw => $hlaw")
       import scala.collection.mutable.LinkedHashSet
       val hLines = hlaw.onlyThat.getOrElse(Seq.empty)
       val warnings = hlaw.onlyThis.getOrElse(Seq.empty)

@@ -97,7 +97,7 @@ trait Executor {
         read(defaultSbtTemplate)
       } else {
         log("Using in-memory sbt template. Create a build.sbt file in ~/.dabble/ to override.")
-        inMemSbtTemplate
+        inMemSbtTemplate(newlines(2))
       }
 
     val initialCommands     = getInitialCommands(dependencies, resolvers, mpVersion)

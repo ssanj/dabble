@@ -133,11 +133,11 @@ object HistoryCommands {
     //TODO: Do we need to distinguish between an empty history file and an absent one?
     hasHistoryFile <- fileExists(historyFileName)
     er2 <- if (!hasHistoryFile) noHistory.map(_ => withResult(SuccessfulAction))
-           else readHistoryFile(historyFileName, argParser).map {
+           else readHistoryFile(historyFileName, argParser).flatMap {
               case -\/(error) => exitWithError(s"could not read history file: $historyFileName due to: $error")
               case \/-(hlaw) =>
-                chooseHistory(searchTerm, prompt, hlaw, hMenu).map {
-                  case QuitHistory => withResult(SuccessfulAction)
+                chooseHistory(searchTerm, prompt, hlaw, hMenu).flatMap {
+                  case QuitHistory => liftDS(withResult(SuccessfulAction))
                   case HistorySelection(line) =>
                     launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter)
                 }
