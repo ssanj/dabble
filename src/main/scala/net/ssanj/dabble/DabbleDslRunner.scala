@@ -86,7 +86,7 @@ class DabbleConsoleInterpreter extends (DabbleDsl ~> Id) {
         leftMap(x => s"Could not read system property: $key due to ${x.getMessage}")
 
     case CallProcess(filename: String, arguments: String, workingDir: String) =>
-      Try(%(Path(filename), arguments)(Path(workingDir))).
+      Try(%(filename, arguments)(Path(workingDir))).
       toDisjunction.
       map(code =>
           ExecutionResult2(None,
@@ -96,7 +96,7 @@ class DabbleConsoleInterpreter extends (DabbleDsl ~> Id) {
 
     case Exit(er: ExecutionResult2) => System.exit(er.code.code)
 
-    case  NoOp => ???
+    case  NoOp =>
 
   }
 }

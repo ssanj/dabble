@@ -64,7 +64,7 @@ object DependencyCommands {
     sbtE <- systemProp("os.name")
     sbtExec = sbtE match {
       case -\/(error) => "sbt"
-      case \/-("windows") => "sbt.bat"
+      case \/-(os) if os.toLowerCase.startsWith("windows") => "sbt.bat"
       case \/-(_) => "sbt"
     }
   } yield sbtExec
