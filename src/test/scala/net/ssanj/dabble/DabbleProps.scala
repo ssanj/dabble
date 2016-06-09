@@ -161,10 +161,19 @@ trait DabbleProps {
     mpv  <- genMacroParadise
   } yield DabbleHistoryLine(deps, res, mpv)
 
+  private[dabble] def genSimpleDabbleHistoryLine: Gen[DabbleHistoryLine] =
+    genDabbleHistoryLine.
+      map(dhl => dhl.copy(
+                  dependencies = nels(dhl.dependencies.head),
+                  resolvers = Seq.empty,
+                  mpVersion = None))
+
   private[dabble] def between[T](min: Int, max: Int)(gen: Gen[T]): Gen[Seq[T]] = for {
     l <- Gen.choose(Math.max(0, min), Math.min(Int.MaxValue, max))
     v <- Gen.listOfN(l, gen)
   } yield v
+
+  private[dabble] def many[T](count: Int)(gen: Gen[T]): Gen[Seq[T]] = Gen.listOfN(count, gen)
 
   private[dabble] implicit val resolverShrink: Shrink[Seq[Resolver]] = Shrink[Seq[Resolver]] {
     case Seq() => Stream.empty
@@ -188,4 +197,6 @@ trait DabbleProps {
     patch <- Gen.choose(1, 30)
  } yield s"${major}.${minor}.${patch}"
 }
+
+object DabbleProps extends DabbleProps
 

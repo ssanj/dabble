@@ -139,20 +139,26 @@ object DependencyCommands {
   def saveHistoryFile(filename: String, selection: DabbleHistoryLine, hlaw: HistoryLinesAndWarnings,
     historyPrinter: DabbleHistoryLine => String):
     DabbleScript[ErrorOr[Unit]] = {
-      // println(s"hlaw => $hlaw")
       import scala.collection.mutable.LinkedHashSet
-      val hLines = hlaw.onlyThat.getOrElse(Seq.empty)
-      val warnings = hlaw.onlyThis.getOrElse(Seq.empty)
+      import scalaz.\&/._
+
+      val (warnings, hLines) =
+        hlaw match {
+          //Should we do something else here? We will be truncating the history file.
+          case This(warnings) => (warnings, Seq.empty)
+          case That(successes) => (Seq.empty, successes)
+          case Both(warnings, successes) => (warnings, successes)
+        }
+
       val uniqueHLines = LinkedHashSet() ++ (selection +: hLines)
       writeFile(filename, uniqueHLines.map(historyPrinter).toSeq) flatMap {
         case e@(-\/(_)) => liftDS(e)
         case s@(\/-(_)) =>
           if (warnings.nonEmpty) newlinesDS(1).flatMap(nl =>
-            log(s"Dabble could not parse the following history lines: ${warnings.mkString(nl)}")).map(_ => s)
+            log(s"Dabble could not parse the following history lines:${nl}${warnings.mkString(tabAsSpaces + nl)}")).map(_ => s)
           else liftDS(s)
       }
     }
-
 
   //program
   def launchSbtConsole(historyFileName: String,
