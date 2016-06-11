@@ -19,7 +19,7 @@ object SaveHistoryFileProps extends Properties("Saving a history file") {
   class SaveHistoryFileInterpreter(world: MMap[String, Seq[String]]) extends (DabbleDsl ~> Id) {
     def apply[A](value: DabbleDsl[A]): Id[A] = value match {
       case NoOp => //do nothing
-      case SystemProp("line.separator") => "\n".right[String]
+      case SystemProp("line.separator") => newline.right[String]
       case Log(message) => {
         world.get("log").
           fold(world += ("log" -> Seq(message)))(
@@ -33,31 +33,25 @@ object SaveHistoryFileProps extends Properties("Saving a history file") {
     }
   }
 
-  private def md5(values: Any*): String = {
-    import java.security.MessageDigest
-    MessageDigest.getInstance("MD5").
-      digest(values.map(_.toString).mkString.getBytes).map("%02x".format(_)).mkString
-  }
+  val filename = s"dabble.history"
 
-  property("should save valid lines and warn about invalid lines") =
-    Prop.forAll(many(2)(genSimpleDabbleHistoryLine)) {
-      case (validHistoryLines) =>
+  def hPrinter(line: DabbleHistoryLine): String = md5(line)
 
-      val selection = genSimpleDabbleHistoryLine.sample.get
-      val linesInError = many(3)(genDependency.map(_.drop(1).mkString(" "))).sample.get
+  property("should save valid lines and warn about invalid lines") = {
+    Prop.forAll(many(2)(genSimpleDabbleHistoryLine)) { validHistoryLines =>
 
+      val selection                     = genSimpleDabbleHistoryLine.sample.get
+      val linesInError                  = invalidDependenciesGen.sample.get
       val hlaw: HistoryLinesAndWarnings = Both(linesInError, validHistoryLines)
-      val filename = s"dabble.history"
-      def printer(line: DabbleHistoryLine): String = md5(line)
 
       val world = MMap[String, Seq[String]]()
 
       val result =
-        saveHistoryFile(filename, selection, hlaw, printer).
+        saveHistoryFile(filename, selection, hlaw, hPrinter).
           foldMap(new SaveHistoryFileInterpreter(world))
 
       val actualHistoryContent = world(filename)
-      val expectedHistoryContent = (selection +: validHistoryLines).map(printer(_))
+      val expectedHistoryContent = (selection +: validHistoryLines).map(hPrinter(_))
 
       val historyContentProp =
       (actualHistoryContent == expectedHistoryContent) :|
@@ -65,7 +59,7 @@ object SaveHistoryFileProps extends Properties("Saving a history file") {
 
       val actualWarningLogs = world("log")
       val expectedWarningLogs =
-        Seq(s"Dabble could not parse the following history lines:${newline}${linesInError.mkString(tabAsSpaces + newline)}")
+        Seq(s"Dabble could not parse the following history lines:${newline}${tabAsSpaces}${linesInError.mkString(newline + tabAsSpaces)}")
 
       val warningLogsProp = (actualWarningLogs == expectedWarningLogs) :|
         labeled(actualWarningLogs.mkString(newline), expectedWarningLogs.mkString(newline))
@@ -73,3 +67,61 @@ object SaveHistoryFileProps extends Properties("Saving a history file") {
       historyContentProp && warningLogsProp && (result.isRight)
     }
   }
+
+  property("should give an additional warning if all history lines are invalid") = {
+    Prop.forAll(genSimpleDabbleHistoryLine) {  selection =>
+      val linesInError = invalidDependenciesGen.sample.get
+      val hlaw: HistoryLinesAndWarnings = This(linesInError)
+
+      val world = MMap[String, Seq[String]]()
+
+      val result =
+          saveHistoryFile(filename, selection, hlaw, hPrinter).
+            foldMap(new SaveHistoryFileInterpreter(world))
+
+      val actualHistoryContent   = world(filename)
+      val expectedHistoryContent = hPrinter(selection)
+
+      val historyContentProp =
+        (actualHistoryContent == Seq(expectedHistoryContent)) :| labeled(
+          "history file")(actualHistoryContent.mkString(","), expectedHistoryContent)
+
+      val actualWarningLogs = world("log")
+      val expectedWarningLogs =
+        Seq(s"Dabble has the following errors:${newline}${tabAsSpaces}All history lines are in error. $filename will be truncated.")
+
+      val warningLogsProp = (actualWarningLogs == expectedWarningLogs) :| labeled(
+        "warnings")(actualWarningLogs.mkString(newline).replace(s"${tabAsSpaces}", "<tab>"),
+                    expectedWarningLogs.mkString(newline).replace(s"${tabAsSpaces}", "<tab>"))
+
+        historyContentProp && warningLogsProp && (result.isRight)
+    }
+  }
+
+  property("should accept an empty history file") = {
+    Prop.forAll(genSimpleDabbleHistoryLine) {  selection =>
+      val hlaw: HistoryLinesAndWarnings = Both(Seq.empty, Seq.empty)
+
+      val world = MMap[String, Seq[String]]()
+
+      val result =
+          saveHistoryFile(filename, selection, hlaw, hPrinter).
+            foldMap(new SaveHistoryFileInterpreter(world))
+
+      val actualHistoryContent   = world(filename)
+      val expectedHistoryContent = Seq(hPrinter(selection))
+
+      val historyContentProp =
+        (actualHistoryContent == expectedHistoryContent) :| labeled(
+          "history file")(actualHistoryContent.mkString(","), expectedHistoryContent.mkString(","))
+
+      val actualWarningLogs   = world.get("log").map(_.mkString(",")).getOrElse("<no content>")
+      val expectedWarningLogs = "<no content>"
+
+      val warningLogsProp = (actualWarningLogs == expectedWarningLogs) :| labeled(
+        "warnings")(actualWarningLogs, expectedWarningLogs)
+
+        historyContentProp && warningLogsProp && (result.isRight)
+    }
+  }
+}

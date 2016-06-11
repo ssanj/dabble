@@ -142,20 +142,30 @@ object DependencyCommands {
       import scala.collection.mutable.LinkedHashSet
       import scalaz.\&/._
 
-      val (warnings, hLines) =
+      val (errors, warnings, hLines) =
         hlaw match {
-          //Should we do something else here? We will be truncating the history file.
-          case This(warnings) => (warnings, Seq.empty)
-          case That(successes) => (Seq.empty, successes)
-          case Both(warnings, successes) => (warnings, successes)
+          //All failures
+          case This(_) =>
+            val truncationNotice = s"All history lines are in error. $filename will be truncated."
+            (Seq(truncationNotice), Seq.empty, Seq.empty)
+
+          //Only successes!
+          case That(successes) => (Seq.empty, Seq.empty, successes)
+
+          //Mix of successes and failures, could be both are empt (as for empty history file)
+          case Both(warnings, successes) => (Seq.empty, warnings, successes)
         }
 
       val uniqueHLines = LinkedHashSet() ++ (selection +: hLines)
       writeFile(filename, uniqueHLines.map(historyPrinter).toSeq) flatMap {
         case e@(-\/(_)) => liftDS(e)
         case s@(\/-(_)) =>
-          if (warnings.nonEmpty) newlinesDS(1).flatMap(nl =>
-            log(s"Dabble could not parse the following history lines:${nl}${warnings.mkString(tabAsSpaces + nl)}")).map(_ => s)
+          if (errors.nonEmpty)
+            newlinesDS(1).flatMap(nl =>
+              log(s"Dabble has the following errors:${nl}${tabAsSpaces}${errors.mkString(nl + tabAsSpaces)}").map(_ => s)
+            )
+          else if (warnings.nonEmpty) newlinesDS(1).flatMap(nl =>
+            log(s"Dabble could not parse the following history lines:${nl}${tabAsSpaces}${warnings.mkString(nl + tabAsSpaces)}")).map(_ => s)
           else liftDS(s)
       }
     }

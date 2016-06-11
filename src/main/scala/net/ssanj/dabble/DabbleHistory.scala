@@ -41,12 +41,14 @@ trait DabbleHistory {
     result
   }
 
+  //TODO: Test
   def readHistoryWithWarnings(cmdlnParser: CommandlineParser)(lines: Seq[String]): HistoryLinesAndWarnings = {
       import \&/._
       val validationNels = readHistory(cmdlnParser)(lines)
       val successes = validationNels.collect { case Success(dhl) => dhl }
       val warnings  = validationNels.collect { case Failure(warningsNel) => warningsNel.list.toList } flatten
 
+      //FIX: There's an issue here. What if the history file is empty? It should not be a This.
       if (successes.isEmpty) This(warnings)
       else if (warnings.isEmpty) That(successes)
       else Both(warnings, successes)

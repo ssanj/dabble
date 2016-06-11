@@ -72,6 +72,8 @@ trait DabbleProps {
 
   private[dabble] def labeled(actual: String, expected: String): String = s"expected:${newline}${tab}${expected}${newline}got:${newline}${tab}$actual"
 
+  private[dabble] def labeled(property: String)(actual: String, expected: String): String = s"$property: expected:${newline}${tab}[${expected}]${newline}got:${newline}${tab}[$actual]"
+
   private[dabble] implicit val dependencyShrink: Shrink[Seq[Dependency]] = Shrink[Seq[Dependency]] {
     case Seq() => Stream.empty
     case Seq(one) => Stream.empty
@@ -196,6 +198,17 @@ trait DabbleProps {
     minor <- Gen.choose(1, 10)
     patch <- Gen.choose(1, 30)
  } yield s"${major}.${minor}.${patch}"
+
+  private[dabble] def invalidDependenciesGen: Gen[Seq[String]] = for {
+    l <- Gen.choose(1, 5)
+    deps <- many(l)(genDependency.map(_.drop(1).mkString(" ")))
+  } yield deps
+
+  private[dabble] def md5(values: Any*): String = {
+    import java.security.MessageDigest
+    MessageDigest.getInstance("MD5").
+      digest(values.map(_.toString).mkString.getBytes).map("%02x".format(_)).mkString
+  }
 }
 
 object DabbleProps extends DabbleProps
