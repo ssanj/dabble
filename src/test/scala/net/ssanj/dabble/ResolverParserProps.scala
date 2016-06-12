@@ -24,7 +24,7 @@ object ResolverParserProps extends Properties("ResolverParser") with DabbleProps
               } else in
             }
 
-        val \/-(resolvers) = ResolverParser.parseResolvers(parsedInputs)
+        val \/-(resolvers) = ResolverParser.parseResolvers(inputs.split(",").toSeq)
         val result: String =
           resolvers.map {
             case ReleaseAndSnapshots(Sonatype    , Public)   => s"sonatype"
@@ -48,6 +48,5 @@ object ResolverParserProps extends Properties("ResolverParser") with DabbleProps
           val parsedInputsString = parsedInputs.mkString(",")
 
           (result == parsedInputsString) :| labeled(result.toArray.mkString("|"), parsedInputsString.toArray.mkString("|"))
-        // }
     }
   }

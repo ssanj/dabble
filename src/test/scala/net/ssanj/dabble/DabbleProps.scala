@@ -177,6 +177,10 @@ trait DabbleProps {
 
   private[dabble] def many[T](count: Int)(gen: Gen[T]): Gen[Seq[T]] = Gen.listOfN(count, gen)
 
+  private[dabble] def manyPairs[A, B](count: Int)(genA: Gen[A], genB: Gen[B]): Gen[Seq[(A, B)]] = {
+    Gen.listOfN(count, genA.flatMap(a => genB.map(b => (a, b))))
+  }
+
   private[dabble] implicit val resolverShrink: Shrink[Seq[Resolver]] = Shrink[Seq[Resolver]] {
     case Seq() => Stream.empty
     case Seq(one) => Stream.empty

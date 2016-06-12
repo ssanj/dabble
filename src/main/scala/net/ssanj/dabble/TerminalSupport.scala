@@ -3,9 +3,9 @@ package net.ssanj.dabble
 final case class HistoryCommand(term: Option[String])
 
 final case class DabbleRunConfig(dependencies: Seq[String] = Seq.empty,
-                           resolvers: Seq[String] = Seq.empty,
-                           macroParadiseVersion: Option[String] = None,
-                           historyCommand: Option[HistoryCommand] = None) {
+                                 resolvers: Seq[String] = Seq.empty,
+                                 macroParadiseVersion: Option[String] = None,
+                                 historyCommand: Option[HistoryCommand] = None) {
   def %(dep: String) = this.copy(dependencies = dependencies :+ dep)
 }
 

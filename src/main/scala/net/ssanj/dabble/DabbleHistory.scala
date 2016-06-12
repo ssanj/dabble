@@ -30,13 +30,8 @@ trait DabbleHistory {
       lines.
         map(line => cmdlnParser(line.split(" "))).
         flatten.
-        map { c =>
-          (for {
-            deps <- parseDependencies(c.dependencies)
-            res  <- (if (c.resolvers.nonEmpty) parseResolvers(c.resolvers) else Seq.empty.right[String])
-          } yield (DabbleHistoryLine(nels(deps.head, deps.tail:_*), res, c.macroParadiseVersion)))
-        }.
-        map(_.validationNel[String])
+        map (c => parseHistoryLine(c.dependencies, c.resolvers, c.macroParadiseVersion).
+                    validationNel[String])
 
     result
   }
@@ -52,7 +47,14 @@ trait DabbleHistory {
       if (successes.isEmpty) This(warnings)
       else if (warnings.isEmpty) That(successes)
       else Both(warnings, successes)
-    }
+  }
+
+  def parseHistoryLine(dependencies: Seq[String], resolvers: Seq[String], mp: Option[String]): String \/ DabbleHistoryLine = {
+    for {
+      deps <- parseDependencies(dependencies)
+      res  <- (if (resolvers.nonEmpty) parseResolvers(resolvers) else Seq.empty.right[String])
+    } yield (DabbleHistoryLine(nels(deps.head, deps.tail:_*), res, mp))
+  }
 }
 
 
