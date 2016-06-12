@@ -13,34 +13,17 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
   def removeSpaces(value: String): String = value.replace(" ", "")
 
   property("generate valid HistoryLinesAndWarnings") =
-    Prop.forAllNoShrink(manyPairs(5)(genDependencyList, genResolverStrings)) {
-      case pairs =>
+    Prop.forAllNoShrink(many(2)(genDependency)) { deps =>
         //This represents a String read from the history file.
         //as such it should be the String as it appears on the commandline.
-        val validLines = pairs.map {
-          case (deps, resolvers) =>
-            //Remove all whitespace from the resolvers. When the ResolverParser processes resolvers, it
-            //trims the whitespace on custom resolvers (those with a custom url). We do something similar
-            //here to ensure that we can load back any generated resolvers even those which have whitespace.
-            //The whitespace trimmer here is more general and removes all whitespace as opposed to that in
-            //the resolver parser which only removes whitespace around the name and url of a custom resolver.
-            ((deps :+ "-r") :+ removeSpaces(resolvers)).mkString(" ")
-        }
-
+        val validLines = deps.map(_.mkString(" "))
         val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
         val validHLinesOrErrors: HistoryLinesOr = readHistory(hParser)(validLines)
+        val allValidProps = validHLinesOrErrors.length == deps.length && validHLinesOrErrors.forall(_.isSuccess)
 
-        val allValidProps = validHLinesOrErrors.length == pairs.length && validHLinesOrErrors.forall(_.isSuccess)
-
-        val invalidLines = pairs.map {
-          case (deps, resolvers) =>
-            //remove dependency concatenation operator '+' and replace resolver concatenation operation ',' with ':'
-            ((deps.map(_.replace("+", "")) :+ "-r") :+ resolvers.replace(",", ":")).mkString(" ")
-        }
-
+        val invalidLines = deps.map(_.map(_.replace("%", "#")).mkString(" "))
         val invalidHLinesOrErrors: HistoryLinesOr = readHistory(hParser)(invalidLines)
-
-        val allInvalidProps = invalidHLinesOrErrors.length == pairs.length && invalidHLinesOrErrors.forall(_.isFailure)
+        val allInvalidProps = invalidHLinesOrErrors.length == deps.length && invalidHLinesOrErrors.forall(_.isFailure)
 
         val mixedLines = validLines.take(1) ++ invalidLines.take(1)
         val mixedHLinesOrErrors: HistoryLinesOr = readHistory(hParser)(mixedLines)
@@ -58,6 +41,7 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
 
         val mixedProps = mixedLines.length == 2              &&
                          validMixedLines.length == 1         &&
+                         validMixedLines == validParsedLines &&
                          invalidMixedLines.length == 1
 
         allValidProps && allInvalidProps && mixedProps
