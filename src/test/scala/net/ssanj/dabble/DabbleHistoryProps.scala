@@ -48,12 +48,13 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
         allValidProps && allInvalidProps && mixedProps
     }
 
+//TODO:Simplify this test
 property("generate valid HistoryLinesOrWarnings") =
   Prop.forAllNoShrink(many(5)(genDependency)) { deps =>
       //This represents a String read from the history file.
       //as such it should be the String as it appears on the commandline.
       import \&/._
-      val validLines = deps.map(_.mkString(" "))
+      val validLines: Seq[String] = deps.map(_.mkString(" "))
       val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
       val validHlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(validLines)
 
@@ -91,6 +92,44 @@ property("generate valid HistoryLinesOrWarnings") =
                           s"That:${thatValues.mkString(",")}", expectedErrors.mkString(","))
       }
 
-    thisProp && thatProp
+      val validBothParsedLines = validLines.
+                  drop(2).
+                  map(l => historyParser.parse(l.split(" ").toSeq, DabbleRunConfig())).
+                  flatten.
+                  map(c => parseHistoryLine(c.dependencies,
+                                            c.resolvers,
+                                            c.macroParadiseVersion)).
+                  collect { case \/-(dhl) => dhl }
+
+
+
+      val invalidBothLines = deps.take(2).map(_.map(_.replace("%", "#")))
+      val invalidBothLinesString: Seq[String] = invalidBothLines.map(_.mkString(" "))
+      val bothHlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(validLines.drop(2) ++ invalidBothLinesString)
+
+      val expectedBothWarnings = invalidBothLines.map(l => s"unable to derive dependencies from: ${l.mkString(",")}")
+      val expectedBothString   = s"Both(this=${expectedBothWarnings.mkString(",")}, that=${validBothParsedLines.mkString(",")})"
+      val bothProp =
+        bothHlaw match {
+          case Both(warnings, dhls) =>
+            (warnings == expectedBothWarnings && dhls == validBothParsedLines) :|
+              labeled("Both Full")(s"Both(this=${warnings.mkString(",")}, that=${dhls.mkString(",")})", expectedBothString)
+          case This(warnings) => false :| labeled("Both Full")(s"This: ${warnings.mkString(",")}", expectedBothString)
+          case That(dhls) => false :| labeled("Both Full")(s"That: ${dhls.mkString(",")}", expectedBothString)
+        }
+
+      val emptyLines = Seq.empty[String]
+      val emptyHlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(emptyLines)
+      val bothEmptyExpectedString = "Both(this=Seq.empty, that=Seq.empty)"
+
+      val emptyProp =
+        emptyHlaw match {
+          case b@Both(warnings, dhls) =>
+            (warnings == Seq.empty && dhls == Seq.empty) :| labeled("Both")(s"$b", bothEmptyExpectedString)
+          case This(warnings) => false :| labeled("Both")(s"This(${warnings.mkString(",")})", bothEmptyExpectedString)
+          case That(dhls) => false :| labeled("Both Empty")(s"That(${dhls.mkString(",")})", bothEmptyExpectedString)
+        }
+
+      emptyProp && thisProp && thatProp && bothProp
   }
 }
