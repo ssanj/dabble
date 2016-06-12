@@ -142,6 +142,26 @@ You can also download the sample [dabble.bat](https://git.io/vr80p) file and run
 dabble.bat <dependencies>
 ```
 
+## Install on OSX using with [brew](https://github.com/mxcl/homebrew)
+
+edwardsmatt created a [brew](https://github.com/mxcl/homebrew) tap for installing the latest version (or `HEAD`) using [brew](https://github.com/mxcl/homebrew). The instructions are below, (or you can checkout the recipe for further details [here](https://github.com/edwardsmatt/homebrew-dabble)):
+
+First, add this tap to your Brew.
+
+    brew tap edwardsmatt/homebrew-dabble
+
+Now you will be able to install the latest dabble release:
+
+    brew install dabble
+
+or the latest HEAD using:
+
+    brew install dabble --HEAD
+
+or, if you want more information about the install you can use:
+
+    brew install dabble --HEAD --debug --verbose
+
 ## Running
 
 ```
