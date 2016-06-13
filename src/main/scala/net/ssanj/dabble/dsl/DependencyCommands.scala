@@ -152,7 +152,7 @@ object DependencyCommands {
           //Only successes!
           case That(successes) => (Seq.empty, Seq.empty, successes)
 
-          //Mix of successes and failures, could be both are empt (as for empty history file)
+          //Mix of successes and failures, could be both are empty (as for empty history file)
           case Both(warnings, successes) => (Seq.empty, warnings, successes)
         }
 

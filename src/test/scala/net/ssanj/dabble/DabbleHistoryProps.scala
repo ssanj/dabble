@@ -5,47 +5,82 @@ import org.scalacheck.Prop.BooleanOperators
 import org.scalacheck.{Prop, Gen}
 
 import scalaz._
+import scalaz.NonEmptyList.nels
 import DabbleProps._
 import DabbleHistory._
 import TerminalSupport._
 
 object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
 
-  def removeSpaces(value: String): String = value.replace(" ", "")
+  // def removeSpaces(value: String): String = value.replace(" ", "")
+
+  type Line = Seq[String]
+
+  //as it would appear after parsing on the commandline
+  private def genMultipleDependencies: Gen[Seq[Line]] = for {
+    n    <- Gen.choose(2, 5)
+    deps <- Gen.listOfN(n, genDependency)
+  } yield deps
+
+  //as it would appear after parsing on the commandline
+  private def genMultipleInvalidDependencies: Gen[Seq[Line]] =
+    genMultipleDependencies.map(_.map(_.map(_.replace("%", "#"))))
+
+  //as it would appear on the commandline
+  private def genMultipleDependencyLines: Gen[Seq[String]] =
+    genMultipleDependencies.map(_.map(_.mkString(" ")))
+
+ //as it would appear on the commandline
+ private def genMultipleInvalidDependencyLines: Gen[Seq[String]] =
+  genMultipleInvalidDependencies.map(_.map(_.mkString(" ")))
+
+  def commaS(values: Seq[Any]): String = values.mkString(",")
 
   property("generate valid HistoryLinesOr") =
-    Prop.forAllNoShrink(many(2)(genDependency)) { deps =>
-        //This represents a String read from the history file.
-        //as such it should be the String as it appears on the commandline.
-        val validLines = deps.map(_.mkString(" "))
+    Prop.forAllNoShrink(genMultipleDependencyLines, genMultipleInvalidDependencyLines) {
+      case (validLines, invalidLines) =>
         val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
-        val validHLinesOrErrors: HistoryLinesOr = readHistory(hParser)(validLines)
-        val allValidProps = validHLinesOrErrors.length == deps.length && validHLinesOrErrors.forall(_.isSuccess)
 
-        val invalidLines = deps.map(_.map(_.replace("%", "#")).mkString(" "))
-        val invalidHLinesOrErrors: HistoryLinesOr = readHistory(hParser)(invalidLines)
-        val allInvalidProps = invalidHLinesOrErrors.length == deps.length && invalidHLinesOrErrors.forall(_.isFailure)
+        val validAndInvalidLines = invalidLines ++ validLines
+        val parsedLines: HistoryLinesOr = readHistory(hParser)(validAndInvalidLines)
 
-        val mixedLines = validLines.take(1) ++ invalidLines.take(1)
-        val mixedHLinesOrErrors: HistoryLinesOr = readHistory(hParser)(mixedLines)
+        val expectedLineLength = validLines.length + invalidLines.length
+        val actualLineLength   = parsedLines.length
+        val lineLengthProp     = (actualLineLength == expectedLineLength) :|
+          labeled("line length")(expectedLineLength.toString, actualLineLength.toString)
 
-        val validMixedLines   = mixedHLinesOrErrors.filter { _.isSuccess }
-        val invalidMixedLines = mixedHLinesOrErrors.filter { _.isFailure }
+        val expectedSuccessesLength = validLines.length
+        val actualSuccessesLength   = parsedLines.filter(_.isSuccess).length
+        val successesLengthProp     = (actualSuccessesLength == expectedSuccessesLength) :|
+          labeled("no. successes")(actualSuccessesLength.toString, expectedSuccessesLength.toString)
 
-        val validParsedLines = validLines.
-                                take(1).
-                                map(l => historyParser.parse(l.split(" ").toSeq, DabbleRunConfig())).
-                                flatten.
-                                map(c => parseHistoryLine(c.dependencies,
-                                                          c.resolvers,
-                                                          c.macroParadiseVersion).validationNel[String])
+        val expectedFailuresLength = invalidLines.length
+        val actualFailuresLength   = parsedLines.filter(_.isFailure).length
+        val failuresLengthProp     = (actualFailuresLength == expectedFailuresLength) :|
+          labeled("no. failures")(actualFailuresLength.toString, expectedFailuresLength.toString)
 
-        val mixedProps = mixedLines.length == 2              &&
-                         validMixedLines.length == 1         &&
-                         validMixedLines == validParsedLines &&
-                         invalidMixedLines.length == 1
+        val parsedDependencies = validAndInvalidLines.map(line =>
+                                  DependencyParser.parseDependencies(line.split(" ").toSeq))
 
-        allValidProps && allInvalidProps && mixedProps
+        val expectedHistoryLines          = parsedDependencies.
+                                              collect { case \/-(deps) =>  deps }
+        val actualHistoryLines            = parsedLines.
+                                              collect { case Success(dhl) => dhl.dependencies.list.toList }
+        val historyLineSuccessContentProp = (actualHistoryLines == expectedHistoryLines) :|
+          labeled("history line content")(commaS(actualHistoryLines), commaS(expectedHistoryLines))
+
+        val expectedFailureStrings    = parsedDependencies.collect { case -\/(fails) =>  fails }
+        val actualFailureStrings      = parsedLines.
+                                          collect { case Failure(fails) => fails.list.toList }.
+                                          flatten
+        val failureStringsContentProp = (actualFailureStrings == expectedFailureStrings) :|
+          labeled("failure strings")(commaS(actualFailureStrings), commaS(expectedFailureStrings))
+
+        lineLengthProp &&
+        successesLengthProp &&
+        failuresLengthProp &&
+        historyLineSuccessContentProp &&
+        failureStringsContentProp
     }
 
 //TODO:Simplify this test
