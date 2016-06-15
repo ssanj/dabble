@@ -9,10 +9,9 @@ import scalaz.NonEmptyList.nels
 import DabbleProps._
 import DabbleHistory._
 import TerminalSupport._
+import ScalaCheckSupport._
 
 object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
-
-  // def removeSpaces(value: String): String = value.replace(" ", "")
 
   type Line = Seq[String]
 
@@ -30,14 +29,21 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
   private def genMultipleDependencyLines: Gen[Seq[String]] =
     genMultipleDependencies.map(_.map(_.mkString(" ")))
 
+  private def genMultipleDependencyLinesWithEmpty: Gen[Seq[String]] = for {
+    line <- Gen.oneOf(Gen.const(Seq.empty[String]), genMultipleDependencyLines)
+  } yield line
+
+
  //as it would appear on the commandline
  private def genMultipleInvalidDependencyLines: Gen[Seq[String]] =
   genMultipleInvalidDependencies.map(_.map(_.mkString(" ")))
 
-  def commaS(values: Seq[Any]): String = values.mkString(",")
+ private def genMultipleInvalidDependencyLinesWithEmpty: Gen[Seq[String]] = for {
+   line <- Gen.oneOf(Gen.const(Seq.empty[String]), genMultipleInvalidDependencyLines)
+  } yield line
 
   property("generate valid HistoryLinesOr") =
-    Prop.forAllNoShrink(genMultipleDependencyLines, genMultipleInvalidDependencyLines) {
+    Prop.forAllNoShrink(genMultipleDependencyLinesWithEmpty, genMultipleInvalidDependencyLinesWithEmpty) {
       case (validLines, invalidLines) =>
         val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
 
@@ -83,196 +89,124 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
         failureStringsContentProp
     }
 
- //TODO: Test for empty lines
+  property("generate valid HistoryLinesOrWarnings for Both") =
+    Prop.forAllNoShrink(genMultipleDependencyLines, genMultipleInvalidDependencyLines) {
+        case (validLines, invalidLines) =>
 
- private def lengthProp[A, B](propName: String)(actual: Seq[A], expected: Seq[B]): Prop = {
-  val actualLength   = actual.length
-  val expectedLength = expected.length
+        import \&/._
 
-  (actualLength == expectedLength) :|
-    labeled(s"$propName Length")(actualLength.toString, expectedLength.toString)
- }
+        val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
 
- private def contentProp[A, B](propName: String, format: Seq[Any] => String = commaS)(
-  actual: Seq[A], expected: Seq[B]): Prop = {
+        val validAndInvalidLines = validLines ++ invalidLines
+        val hlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(validAndInvalidLines)
 
-  (actual == expected) :|
-    labeled(s"$propName Content")(format(actual), format(expected))
- }
+        val isBothProp = booleanProp("Both")(hlaw.isBoth, true)
 
- private def booleanProp(propName: String)(actual: Boolean, expected: Boolean): Prop = {
-  (actual == expected) :| labeled(s"Is $propName")(actual.toString, expected.toString)
-}
+        val (parsedThis, parsedThat) = hlaw.onlyBoth.get
 
+        val thisLengthProp = lengthProp("This")(parsedThis, invalidLines)
 
-//TODO:Simplify this test
-property("generate valid HistoryLinesOrWarnings for Both") =
-  Prop.forAllNoShrink(genMultipleDependencyLines, genMultipleInvalidDependencyLines) {
-      case (validLines, invalidLines) =>
+        val thatLengthProp = lengthProp("That")(parsedThat, validLines)
 
-      import \&/._
+        val bothLengthProp = lengthProp("Both")(parsedThis ++ parsedThat, validAndInvalidLines)
 
-      val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
+        val thisContent =
+          invalidLines.map(line => DependencyParser.parseDependencies(line.split(" ").toSeq)) collect {
+            case -\/(error) => error
+          }
 
-      val validAndInvalidLines = validLines ++ invalidLines
-      val hlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(validAndInvalidLines)
+        val thatContent =
+          validLines.map(line => DependencyParser.parseDependencies(line.split(" ").toSeq)).collect {
+            case \/-(deps) => DabbleHistoryLine(nels(deps.head, deps.tail:_*))
+          }
 
-      val isBothProp = booleanProp("Both")(hlaw.isBoth, true)
+        val thisContentProp = contentProp(propName = "This")(thisContent, parsedThis)
 
-      val (parsedThis, parsedThat) = hlaw.onlyBoth.get
-
-      val thisLengthProp = lengthProp("This")(parsedThis, invalidLines)
-
-      val thatLengthProp = lengthProp("That")(parsedThat, validLines)
-
-      val bothLengthProp = lengthProp("Both")(parsedThis ++ parsedThat, validAndInvalidLines)
-
-      val thisContent =
-        invalidLines.map(line => DependencyParser.parseDependencies(line.split(" ").toSeq)) collect {
-          case -\/(error) => error
-        }
-
-      val thatContent =
-        validLines.map(line => DependencyParser.parseDependencies(line.split(" ").toSeq)).collect {
-          case \/-(deps) => DabbleHistoryLine(nels(deps.head, deps.tail:_*))
-        }
-
-      val thisContentProp = contentProp(propName = "This")(thisContent, parsedThis)
-
-      val thatContentProp = contentProp(propName = "That")(thatContent, parsedThat)
+        val thatContentProp = contentProp(propName = "That")(thatContent, parsedThat)
 
 
-      isBothProp      &&
-      thisLengthProp  &&
-      thatLengthProp  &&
-      bothLengthProp  &&
-      thisContentProp &&
-      thatContentProp
-  }
+        isBothProp      &&
+        thisLengthProp  &&
+        thatLengthProp  &&
+        bothLengthProp  &&
+        thisContentProp &&
+        thatContentProp
+    }
 
-property("generate valid HistoryLinesOrWarnings for This") =
-  Prop.forAllNoShrink(genMultipleInvalidDependencyLines) { invalidLines =>
-      import \&/._
+  property("generate valid HistoryLinesOrWarnings for This") =
+    Prop.forAllNoShrink(genMultipleInvalidDependencyLines) { invalidLines =>
+        import \&/._
 
-      val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
+        val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
 
-      val hlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(invalidLines)
+        val hlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(invalidLines)
 
-      val isThisProp = booleanProp("This")(hlaw.isThis, true)
+        val isThisProp = booleanProp("This")(hlaw.isThis, true)
 
-      val parsedThis = hlaw.onlyThis.get
+        val parsedThis = hlaw.onlyThis.get
 
-      val thisLengthProp = lengthProp("This")(parsedThis, invalidLines)
+        val thisLengthProp = lengthProp("This")(parsedThis, invalidLines)
 
-      val thisContent =
-        invalidLines.map(line => DependencyParser.parseDependencies(line.split(" ").toSeq)) collect {
-          case -\/(error) => error
-        }
+        val thisContent =
+          invalidLines.map(line => DependencyParser.parseDependencies(line.split(" ").toSeq)) collect {
+            case -\/(error) => error
+          }
 
-      val thisContentProp = contentProp(propName = "This")(thisContent, parsedThis)
+        val thisContentProp = contentProp(propName = "This")(thisContent, parsedThis)
 
-      isThisProp      &&
-      thisLengthProp  &&
-      thisContentProp
-  }
+        isThisProp      &&
+        thisLengthProp  &&
+        thisContentProp
+    }
 
-property("generate valid HistoryLinesOrWarnings for That") =
-  Prop.forAllNoShrink(genMultipleDependencyLines) { validLines =>
-      import \&/._
+  property("generate valid HistoryLinesOrWarnings for That") =
+    Prop.forAllNoShrink(genMultipleDependencyLines) { validLines =>
+        import \&/._
 
-      val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
+        val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
 
-      val hlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(validLines)
+        val hlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(validLines)
 
-      val isThatProp = booleanProp("That")(hlaw.isThat, true)
+        val isThatProp = booleanProp("That")(hlaw.isThat, true)
 
-      val parsedThat = hlaw.onlyThat.get
+        val parsedThat = hlaw.onlyThat.get
 
-      val thatLengthProp = lengthProp("That")(parsedThat, validLines)
+        val thatLengthProp = lengthProp("That")(parsedThat, validLines)
 
-      val thatContent =
-        validLines.map(line => DependencyParser.parseDependencies(line.split(" ").toSeq)) collect {
-          case \/-(deps) => DabbleHistoryLine(nels(deps.head, deps.tail:_*))
-        }
+        val thatContent =
+          validLines.map(line => DependencyParser.parseDependencies(line.split(" ").toSeq)) collect {
+            case \/-(deps) => DabbleHistoryLine(nels(deps.head, deps.tail:_*))
+          }
 
-      val thatContentProp = contentProp(propName = "That")(thatContent, parsedThat)
+        val thatContentProp = contentProp(propName = "That")(thatContent, parsedThat)
 
-      isThatProp      &&
-      thatLengthProp  &&
-      thatContentProp
-  }
-    //   val validParsedLines = validLines.
-    //                     take(5).
-    //                     map(l => historyParser.parse(l.split(" ").toSeq, DabbleRunConfig())).
-    //                     flatten.
-    //                     map(c => parseHistoryLine(c.dependencies,
-    //                                               c.resolvers,
-    //                                               c.macroParadiseVersion)).
-    //                     collect { case \/-(dhl) => dhl }
+        isThatProp      &&
+        thatLengthProp  &&
+        thatContentProp
+    }
 
-    //  val thatProp =
-    //    validHlaw match {
-    //      case That(values) => (values == validParsedLines) :|
-    //        labeled("That")(s"${values.mkString(",")}", s"${validParsedLines.mkString(",")}")
-    //      case This(values) => false :| labeled("That")(s"This: ${values.mkString(",")}", s"${validParsedLines.mkString(",")}")
-    //      case Both(thisValues, thatValues) => false :|
-    //       labeled("That")(s"Both: This:${thisValues.mkString(",")} " +
-    //                       s"That:${thatValues.mkString(",")}", validParsedLines.mkString(","))
-    //    }
+  property("generate valid HistoryLinesOrWarnings with empty lines") =
+    Prop.forAllNoShrink(Gen.resize(1, Gen.const(Seq.empty[String]))) { emptyLines =>
 
-    // val invalidLines = deps.map(_.map(_.replace("%", "#")))
-    // val invalidLinesString = invalidLines.map(_.mkString(" "))
-    // val invalidHlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(invalidLinesString)
-    // val expectedErrors = invalidLines.map(l => s"unable to derive dependencies from: ${l.mkString(",")}")
+        import \&/._
 
-    // val thisProp =
-    //   invalidHlaw match {
-    //     case This(values) => (values == expectedErrors) :|
-    //       labeled("This")(values.mkString(","), expectedErrors.mkString(","))
-    //     case That(values) => false :| labeled("valid")(s"That: ${values.mkString(",")}", expectedErrors.mkString(","))
-    //     case Both(thisValues, thatValues) => false :|
-    //       labeled("This")(s"Both: This:${thisValues.mkString(",")} " +
-    //                       s"That:${thatValues.mkString(",")}", expectedErrors.mkString(","))
-    //   }
+        val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
 
-    //   val validBothParsedLines = validLines.
-    //               drop(2).
-    //               map(l => historyParser.parse(l.split(" ").toSeq, DabbleRunConfig())).
-    //               flatten.
-    //               map(c => parseHistoryLine(c.dependencies,
-    //                                         c.resolvers,
-    //                                         c.macroParadiseVersion)).
-    //               collect { case \/-(dhl) => dhl }
+        val hlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(emptyLines)
 
+        val isEmptyProp = booleanProp("Empty")(emptyLines.isEmpty, true)
 
+        val isBothProp  = booleanProp("Both")(hlaw.isBoth, true)
 
-    //   val invalidBothLines = deps.take(2).map(_.map(_.replace("%", "#")))
-    //   val invalidBothLinesString: Seq[String] = invalidBothLines.map(_.mkString(" "))
-    //   val bothHlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(validLines.drop(2) ++ invalidBothLinesString)
+        val (parsedThis, parsedThat) = hlaw.onlyBoth.get
 
-    //   val expectedBothWarnings = invalidBothLines.map(l => s"unable to derive dependencies from: ${l.mkString(",")}")
-    //   val expectedBothString   = s"Both(this=${expectedBothWarnings.mkString(",")}, that=${validBothParsedLines.mkString(",")})"
-    //   val bothProp =
-    //     bothHlaw match {
-    //       case Both(warnings, dhls) =>
-    //         (warnings == expectedBothWarnings && dhls == validBothParsedLines) :|
-    //           labeled("Both Full")(s"Both(this=${warnings.mkString(",")}, that=${dhls.mkString(",")})", expectedBothString)
-    //       case This(warnings) => false :| labeled("Both Full")(s"This: ${warnings.mkString(",")}", expectedBothString)
-    //       case That(dhls) => false :| labeled("Both Full")(s"That: ${dhls.mkString(",")}", expectedBothString)
-    //     }
+        val thisLengthProp = lengthProp("This")(parsedThis, emptyLines)
 
-    //   val emptyLines = Seq.empty[String]
-    //   val emptyHlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(emptyLines)
-    //   val bothEmptyExpectedString = "Both(this=Seq.empty, that=Seq.empty)"
+        val thatLengthProp = lengthProp("That")(parsedThat, emptyLines)
 
-    //   val emptyProp =
-    //     emptyHlaw match {
-    //       case b@Both(warnings, dhls) =>
-    //         (warnings == Seq.empty && dhls == Seq.empty) :| labeled("Both")(s"$b", bothEmptyExpectedString)
-    //       case This(warnings) => false :| labeled("Both")(s"This(${warnings.mkString(",")})", bothEmptyExpectedString)
-    //       case That(dhls) => false :| labeled("Both Empty")(s"That(${dhls.mkString(",")})", bothEmptyExpectedString)
-    //     }
-
-    //   emptyProp && thisProp && thatProp && bothProp
-  // }
+        isEmptyProp     &&
+        isBothProp      &&
+        thisLengthProp  &&
+        thatLengthProp
+    }
 }
