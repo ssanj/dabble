@@ -50,37 +50,29 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
         val validAndInvalidLines = invalidLines ++ validLines
         val parsedLines: HistoryLinesOr = readHistory(hParser)(validAndInvalidLines)
 
-        val expectedLineLength = validLines.length + invalidLines.length
-        val actualLineLength   = parsedLines.length
-        val lineLengthProp     = (actualLineLength == expectedLineLength) :|
-          labeled("line length")(expectedLineLength.toString, actualLineLength.toString)
+        val lineLengthProp       = lengthProp("line")(parsedLines, validAndInvalidLines)
 
-        val expectedSuccessesLength = validLines.length
-        val actualSuccessesLength   = parsedLines.filter(_.isSuccess).length
-        val successesLengthProp     = (actualSuccessesLength == expectedSuccessesLength) :|
-          labeled("no. successes")(actualSuccessesLength.toString, expectedSuccessesLength.toString)
+        val successesLengthProp  = lengthProp("successes")(parsedLines.filter(_.isSuccess), validLines)
 
-        val expectedFailuresLength = invalidLines.length
-        val actualFailuresLength   = parsedLines.filter(_.isFailure).length
-        val failuresLengthProp     = (actualFailuresLength == expectedFailuresLength) :|
-          labeled("no. failures")(actualFailuresLength.toString, expectedFailuresLength.toString)
+        val failuresLengthProp   = lengthProp("failures")(parsedLines.filter(_.isFailure), invalidLines)
 
-        val parsedDependencies = validAndInvalidLines.map(line =>
-                                  DependencyParser.parseDependencies(line.split(" ").toSeq))
+        val parsedDependencies   = validAndInvalidLines.map(line =>
+                                     DependencyParser.parseDependencies(line.split(" ").toSeq))
 
-        val expectedHistoryLines          = parsedDependencies.
-                                              collect { case \/-(deps) =>  deps }
-        val actualHistoryLines            = parsedLines.
-                                              collect { case Success(dhl) => dhl.dependencies.list.toList }
-        val historyLineSuccessContentProp = (actualHistoryLines == expectedHistoryLines) :|
-          labeled("history line content")(commaS(actualHistoryLines), commaS(expectedHistoryLines))
+        val expectedHistoryLines = parsedDependencies.collect { case \/-(deps) =>  deps }
 
-        val expectedFailureStrings    = parsedDependencies.collect { case -\/(fails) =>  fails }
-        val actualFailureStrings      = parsedLines.
+        val actualHistoryLines   = parsedLines.collect { case Success(dhl) => dhl.dependencies.list.toList }
+
+        val historyLineSuccessContentProp = contentProp("history line")(
+          actualHistoryLines, expectedHistoryLines)
+
+        val expectedFailureStrings = parsedDependencies.collect { case -\/(fails) =>  fails }
+
+        val actualFailureStrings   = parsedLines.
                                           collect { case Failure(fails) => fails.list.toList }.
                                           flatten
-        val failureStringsContentProp = (actualFailureStrings == expectedFailureStrings) :|
-          labeled("failure strings")(commaS(actualFailureStrings), commaS(expectedFailureStrings))
+
+        val failureStringsContentProp = contentProp("failure Strings")(actualFailureStrings, expectedFailureStrings)
 
         lineLengthProp &&
         successesLengthProp &&
