@@ -25,6 +25,7 @@ trait DabbleHistory {
 
   type HistoryLinesAndWarnings = Seq[String] \&/ Seq[DabbleHistoryLine]
 
+  //TODO: Add tests around cmdlnParser.
   def readHistory(cmdlnParser: CommandlineParser)(lines: Seq[String]): HistoryLinesOr = {
     val result =
       lines.

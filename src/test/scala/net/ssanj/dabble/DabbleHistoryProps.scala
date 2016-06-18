@@ -29,21 +29,16 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
   private def genMultipleDependencyLines: Gen[Seq[String]] =
     genMultipleDependencies.map(_.map(_.mkString(" ")))
 
-  private def genMultipleDependencyLinesWithEmpty: Gen[Seq[String]] = for {
-    line <- Gen.oneOf(Gen.const(Seq.empty[String]), genMultipleDependencyLines)
-  } yield line
-
-
  //as it would appear on the commandline
- private def genMultipleInvalidDependencyLines: Gen[Seq[String]] =
-  genMultipleInvalidDependencies.map(_.map(_.mkString(" ")))
+ private def genMultipleInvalidDependencyLines: Gen[Seq[String]] = for {
+  invalid <- genMultipleInvalidDependencies.map(_.map(_.mkString(" ")))
+  empty   <- genEmptyLines
+ } yield scala.util.Random.shuffle(invalid ++ empty)
 
- private def genMultipleInvalidDependencyLinesWithEmpty: Gen[Seq[String]] = for {
-   line <- Gen.oneOf(Gen.const(Seq.empty[String]), genMultipleInvalidDependencyLines)
-  } yield line
+ private def genEmptyLines: Gen[Seq[String]] = Gen.containerOf[List, String](Gen.const(""))
 
   property("generate valid HistoryLinesOr") =
-    Prop.forAllNoShrink(genMultipleDependencyLinesWithEmpty, genMultipleInvalidDependencyLinesWithEmpty) {
+    Prop.forAllNoShrink(genMultipleDependencyLines, genMultipleInvalidDependencyLines) {
       case (validLines, invalidLines) =>
         val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
 
@@ -116,7 +111,6 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
 
         val thatContentProp = contentProp(propName = "That")(thatContent, parsedThat)
 
-
         isBothProp      &&
         thisLengthProp  &&
         thatLengthProp  &&
@@ -175,30 +169,5 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
         isThatProp      &&
         thatLengthProp  &&
         thatContentProp
-    }
-
-  property("generate valid HistoryLinesOrWarnings with empty lines") =
-    Prop.forAllNoShrink(Gen.resize(1, Gen.const(Seq.empty[String]))) { emptyLines =>
-
-        import \&/._
-
-        val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
-
-        val hlaw: HistoryLinesAndWarnings = readHistoryWithWarnings(hParser)(emptyLines)
-
-        val isEmptyProp = booleanProp("Empty")(emptyLines.isEmpty, true)
-
-        val isBothProp  = booleanProp("Both")(hlaw.isBoth, true)
-
-        val (parsedThis, parsedThat) = hlaw.onlyBoth.get
-
-        val thisLengthProp = lengthProp("This")(parsedThis, emptyLines)
-
-        val thatLengthProp = lengthProp("That")(parsedThat, emptyLines)
-
-        isEmptyProp     &&
-        isBothProp      &&
-        thisLengthProp  &&
-        thatLengthProp
     }
 }
