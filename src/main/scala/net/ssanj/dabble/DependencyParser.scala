@@ -81,4 +81,11 @@ trait DependencyParser  {
   }
 }
 
-object DependencyParser extends DependencyParser
+object DependencyParser extends DependencyParser {
+  def toInputStrings(deps: Seq[Dependency]): Seq[String] = IList(deps map {
+    case ScalaVersionSupplied(org, name, version, None)         => Seq(org, "%",  name, "%", version)
+    case ScalaVersionSupplied(org, name, version, Some(config)) => Seq(org, "%",  name, "%", version, "%", config)
+    case ScalaVersionDerived (org, name, version, None)         => Seq(org, "%%",  name, "%", version)
+    case ScalaVersionDerived (org, name, version, Some(config)) => Seq(org, "%%", name, "%", version, "%", config)
+  }: _*).intersperse(Seq("+")).toList.flatten
+}

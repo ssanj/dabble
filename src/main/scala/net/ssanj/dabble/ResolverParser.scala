@@ -95,7 +95,7 @@ trait ResolverParser {
         parse(t, resolvers :+ Bintray(owner, repo))
       case Seq(CustomStr(name, url), t@_*) =>
         parse(t, resolvers :+ Custom(name, url))
-      case r => s"unknown repository type: $r".left
+      case r => s"unknown repository type: ${r.mkString(",")}".left
     }
   }
 }

@@ -48,7 +48,6 @@ trait DabbleHistory {
       else Both(warnings, successes)
   }
 
-  //TODO: Test
   def parseHistoryLine(dependencies: Seq[String], resolvers: Seq[String], mp: Option[String]): String \/ DabbleHistoryLine = {
     for {
       deps <- parseDependencies(dependencies)

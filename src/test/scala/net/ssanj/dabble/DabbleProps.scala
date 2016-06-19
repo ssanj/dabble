@@ -163,6 +163,18 @@ trait DabbleProps {
     mpv  <- genMacroParadise
   } yield DabbleHistoryLine(deps, res, mpv)
 
+  private[dabble] def genInvalidDabbleHistoryLineInputs: Gen[(Seq[String], Seq[String], Seq[String], Seq[String])] = {
+    import Implicits._
+    for {
+      validDeps   <- genDependencies.map(DependencyParser.toInputStrings)
+      invalidDeps <- genDependencies.map(deps => DependencyParser.toInputStrings(deps).map(
+                      _.replace("%", "#")))
+      validRes    <- genResolvers.map(_.map(r => implicitly[Show[ResolverString]].shows(ResolverString(r))))
+      invalidRes  <- genResolvers.map(_.map(r => implicitly[Show[ResolverString]].shows(ResolverString(r)).
+                      drop(2).replace("@", "$$")))
+    } yield (validDeps, validRes, invalidDeps, invalidRes)
+  }
+
   private[dabble] def genSimpleDabbleHistoryLine: Gen[DabbleHistoryLine] =
     genDabbleHistoryLine.
       map(dhl => dhl.copy(

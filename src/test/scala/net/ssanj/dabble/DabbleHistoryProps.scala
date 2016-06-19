@@ -170,4 +170,46 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
         thatLengthProp  &&
         thatContentProp
     }
+
+
+ property("generate a Dabble History Line given deps, resolvers and mp") =
+  Prop.forAll(genDabbleHistoryLine) { dhl =>
+    import Implicits._
+    val deps = DependencyParser.toInputStrings(dhl.dependencies.list.toList)
+    val resolvers = dhl.resolvers.map(r => implicitly[Show[ResolverString]].shows(ResolverString(r)))
+    val result = parseHistoryLine(deps, resolvers, dhl.mpVersion)
+
+    val isRightProp = booleanProp("isRight")(result.isRight, true)
+
+    val actual = (result: @unchecked) match { case \/-(v) => v }
+    val isEqualToDHL = contentProp("same as supplied DHL")( Seq(actual), Seq(dhl))
+
+    isRightProp && isEqualToDHL
+  }
+
+property("generate an error on invalid history inputs") =
+  Prop.forAllNoShrink(genInvalidDabbleHistoryLineInputs) {
+    case (validDeps, validRes, invalidDeps, invalidRes) =>
+
+      val invalidDepsResult     = parseHistoryLine(invalidDeps, validRes, None)
+      val invalidResolverResult = parseHistoryLine(validDeps, invalidRes, None)
+
+      val depsFailContent = (invalidDepsResult: @unchecked) match { case -\/(v) => v }
+      val resFailContent  = (invalidResolverResult: @unchecked) match { case -\/(v) => v }
+
+      val isLeftDepsProp = booleanProp("isLeft-Deps")(invalidDepsResult.isLeft, true)
+      val depsContentProp = contentProp("deps errors")(
+        Seq(depsFailContent),
+        Seq(s"unable to derive dependencies from: ${invalidDeps.mkString(",")}"))
+
+      val isLeftResProp  = booleanProp("isLeft-Res")(invalidResolverResult.isLeft, true)
+      val resContentProp = contentProp("res errors")(
+        Seq(resFailContent),
+        Seq(s"unknown repository type: ${invalidRes.mkString(",")}"))
+
+      isLeftDepsProp  &&
+      isLeftResProp   &&
+      depsContentProp &&
+      resContentProp
+  }
 }
