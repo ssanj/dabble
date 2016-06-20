@@ -14,6 +14,8 @@ import DabbleDslDef._
 import DabbleHistory.HistoryLinesAndWarnings
 import dsl.DependencyCommands.saveHistoryFile
 
+import ScalaCheckSupport._
+
 object SaveHistoryFileProps extends Properties("Saving a history file") {
 
   class SaveHistoryFileInterpreter(world: MMap[String, Seq[String]]) extends (DabbleDsl ~> Id) {
@@ -27,8 +29,13 @@ object SaveHistoryFileProps extends Properties("Saving a history file") {
           ()
       }
       case WriteFile(filename, lines) =>
-        world += (filename -> lines)
-        ().right
+        if (filename.endsWith("error")) {
+          s"Could not write to: $filename".left[Unit]
+        }else {
+          world += (filename -> lines)
+          ().right
+        }
+
       case x => throw new IllegalArgumentException(s"unhandled command: $x")
     }
   }
@@ -123,5 +130,27 @@ object SaveHistoryFileProps extends Properties("Saving a history file") {
 
         historyContentProp && warningLogsProp && (result.isRight)
     }
+  }
+
+
+  property("should return an error if the history file can't be written to") = {
+      Prop.forAll(genSimpleDabbleHistoryLine) {  selection =>
+        val hlaw: HistoryLinesAndWarnings = Both(Seq.empty, Seq.empty)
+
+        val world = MMap[String, Seq[String]]()
+        val unwritableFile = s"${filename}.error"
+
+        val result =
+          saveHistoryFile(unwritableFile, selection, hlaw, hPrinter).
+            foldMap(new SaveHistoryFileInterpreter(world))
+
+        val isLeftProp = booleanProp("isLeft")(result.isLeft, true)
+
+        val content = result.swap.toOption.get
+
+        val messageProp = contentProp("message")(Seq(content), Seq(s"Could not write to: $unwritableFile"))
+
+        isLeftProp && messageProp
+      }
   }
 }
