@@ -36,6 +36,9 @@ final class SaveHistoryFileInterpreter(world: MMap[String, Seq[String]]) extends
     case ReadFile(filename) =>
       world.get(s"$filename") \/>(s"could not read filename: $filename")
 
+    case SystemProp(key: String) =>
+      world.get("os.name").flatMap(_.headOption) \/> (s"could not find os.name property")
+
     case x => throw new IllegalArgumentException(s"unhandled command: $x")
   }
 }
