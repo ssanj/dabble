@@ -1,7 +1,10 @@
 package net.ssanj.dabble
 
-import scalaz.{\/, \/-, -\/, Free}
+import scala.language.implicitConversions
+
+import scalaz._
 import scalaz.Free._
+import scalaz.syntax.validation._
 
 //Free only encapsulates side effects. Not logic. Logic is performed in the interpreter.
 //Free Scipts have to return a Free[DabbleHistory, ?]
@@ -11,6 +14,22 @@ import scalaz.Free._
 object DabbleDslDef {
 
   type ErrorOr[A] = String \/ A
+
+  final case class ErrorOrAOps[A](value: ErrorOr[A]) {
+    def toDabbleResult: DabbleResult[A] = value.fold(l =>  l.failureNel[SuccessResult[String, A]],
+                                                     r => SuccessResult(Seq.empty, r).successNel[String])
+  }
+
+  final case class SuccessResult[W, S](warnings: Seq[W], success: S)
+
+  object ErrorOr {
+    implicit def toErrorOrOpsFromErrorOr[A](value: ErrorOr[A]): ErrorOrAOps[A] = ErrorOrAOps[A](value)
+  }
+
+  type FailureNelOrSuccessResult[F, W, S] = ValidationNel[F, SuccessResult[W, S]]
+
+  type DabbleResult[A] = FailureNelOrSuccessResult[String, String, A]
+
 
   sealed trait DabbleDsl[A]
   final case class ReadFile(filename: String) extends DabbleDsl[ErrorOr[Seq[String]]]
