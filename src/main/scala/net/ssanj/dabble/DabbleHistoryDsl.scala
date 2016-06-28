@@ -43,7 +43,7 @@ object DabbleDslDef {
 
   final case class ReadInput(prompt: String) extends DabbleDsl[String]
   final case class SystemProp(key: String) extends DabbleDsl[ErrorOr[String]]
-  final case class CallProcess(filename: String, arguments: String, workingDir: String) extends DabbleDsl[ErrorOr[ExecutionResult2]]
+  final case class CallProcess(filename: String, arguments: String, workingDir: String) extends DabbleDsl[ErrorOr[Unit]]
   final case class Exit(er: ExecutionResult2) extends DabbleDsl[Unit]
   final case object NoOp extends DabbleDsl[Unit]
 
@@ -67,7 +67,7 @@ object DabbleDslDef {
   def systemProp(key: String): DabbleScript[ErrorOr[String]] = liftF(SystemProp(key))
 
   def callProcess(filename: String, arguments: String, workingDir: String):
-    DabbleScript[ErrorOr[ExecutionResult2]] = liftF(CallProcess(filename, arguments, workingDir))
+    DabbleScript[ErrorOr[Unit]] = liftF(CallProcess(filename, arguments, workingDir))
 
   def exit(er: ExecutionResult2): DabbleScript[Unit] = liftF(Exit(er))
 

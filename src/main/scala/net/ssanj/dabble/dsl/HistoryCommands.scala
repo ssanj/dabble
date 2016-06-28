@@ -127,26 +127,28 @@ object HistoryCommands {
                      argParser: CommandlineParser,
                      hMenu: HistoryMenu,
                      prompt: String,
-                     historyPrinter: DabbleHistoryLine => String): DabbleScript[Unit] = for {
+                     historyPrinter: DabbleHistoryLine => String): DabbleScript[ExecutionResult2] = ???//for {
     //TODO: Simplify readHistoryFile to return Seq.empty if the history file is not found.
     //TODO: readHistoryFile is going to be common. Pull it out.
     //TODO: Do we need to distinguish between an empty history file and an absent one?
-    hasHistoryFile <- fileExists(historyFileName)
-    er2 <- if (!hasHistoryFile) noHistory.map(_ => withResult(SuccessfulAction))
-           else readHistoryFile(historyFileName, argParser).flatMap {
-              case -\/(error) => exitWithError(s"could not read history file: $historyFileName due to: $error")
-              case \/-(hlaw) =>
-                chooseHistory(searchTerm, prompt, hlaw, hMenu).flatMap {
-                  case QuitHistory => liftDS(withResult(SuccessfulAction))
-                  case HistorySelection(line) =>
-                    launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter)
-                }
-           }
-    _ <- er2 match {
-          case ExecutionResult2(_, SuccessfulAction) => noOp
-          case ExecutionResult2(errors, UnsuccessfulAction) =>
-            errors.map(e => log(s"Dabble exited with the following errors: $e")).
-                   getOrElse(log("Dabble exited with errors."))
-        }
-  } yield ()
+    // hasHistoryFile <- fileExists(historyFileName)
+    // er2 <- if (!hasHistoryFile) noHistory.map(_ => withResult(SuccessfulAction))
+    //        else readHistoryFile(historyFileName, argParser).flatMap {
+    //           case -\/(error) => exitWithError(s"could not read history file: $historyFileName due to: $error")
+    //           case \/-(hlaw) =>
+    //             chooseHistory(searchTerm, prompt, hlaw, hMenu).flatMap {
+    //               case QuitHistory => liftDS(withResult(SuccessfulAction))
+    //               case HistorySelection(line) =>
+    //                 launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter).
+    //                   fold(l => ExecutionResult2(Option(l), UnsuccessfulAction),
+    //                        _ => withResult(SuccessfulAction))
+    //             }
+    //        }
+    // _ <- er2 match {
+    //       case ExecutionResult2(_, SuccessfulAction) => noOp
+    //       case ExecutionResult2(errors, UnsuccessfulAction) =>
+    //         errors.map(e => log(s"Dabble exited with the following errors: $e")).
+    //                getOrElse(log("Dabble exited with errors."))
+    //     }
+  // } yield ()
 }

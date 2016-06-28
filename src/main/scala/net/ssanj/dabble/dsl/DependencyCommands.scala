@@ -17,8 +17,8 @@ import ResolverParser._
 object DependencyCommands {
 
   //TODO: split this method up
-  def launchDabble(line: DabbleHistoryLine): DabbleScript[ExecutionResult2] = for {
-    _ <- logDabbleVersion
+  def launchDabble(line: DabbleHistoryLine): DabbleScript[ErrorOr[Unit]] = for {
+    lineSeparator       <- newlinesDS(1)
     dependencies        = line.dependencies.list.toList
     resolvers           = line.resolvers
     mpVersion           = line.mpVersion
@@ -26,7 +26,6 @@ object DependencyCommands {
     defaultSbtTemplate  = dabbleHome.path/defaultBuildFile
     outputSBTFile       = dabbleHome.work.path/defaultBuildFile
 
-    lineSeparator       <- newlinesDS(1)
     doubleLineSepator = s"${lineSeparator}${lineSeparator}"
 
     sbtTemplateContent  <- fileExists(defaultSbtTemplate.toString).
@@ -43,20 +42,14 @@ object DependencyCommands {
     formattedResolverString      = (if (resolvers.nonEmpty) (sbtResolverString + doubleLineSepator) else "")
     formattedMacroParadise       = mpVersion.map(printMacroParadise).fold("")(_ + doubleLineSepator)
 
-    writeResult <- writeFile(outputSBTFile.toString,
-                              Seq(formattedSbtTemplateContent  +
-                                  formattedResolverString      +
-                                  formattedSbtDependencyString +
-                                  formattedMacroParadise       +
-                                  initialCommands))
+    _ <- writeFile(outputSBTFile.toString,
+              Seq(formattedSbtTemplateContent  +
+                  formattedResolverString      +
+                  formattedSbtDependencyString +
+                  formattedMacroParadise       +
+                  initialCommands))
 
-    result <- writeResult match {
-              case -\/(error) =>
-                liftDS(
-                  ExecutionResult2(Option(s"couldn't create sbt file: $outputSBTFile due to: $error."),
-                    UnsuccessfulAction))
-              case \/-(_) => executeSbt
-    }
+   result <- executeSbt
 
   } yield result
 
@@ -69,13 +62,9 @@ object DependencyCommands {
     }
   } yield sbtExec
 
-  def executeSbt: DabbleScript[ExecutionResult2] = for {
+  def executeSbt: DabbleScript[ErrorOr[Unit]] = for {
     sbt <- getSBTExec
-    resultE <- callProcess(sbt, "console-quick", dabbleHome.work.path.toString)
-    result = resultE match {
-      case -\/(error) => ExecutionResult2(Option(error), UnsuccessfulAction)
-      case \/-(er) => er
-    }
+    result <- callProcess(sbt, "console-quick", dabbleHome.work.path.toString)
   } yield result
 
   private def getInitialCommands(dependencies: Seq[Dependency], resolvers: Seq[Resolver],
@@ -127,12 +116,14 @@ object DependencyCommands {
   def launchDabbleAndSaveHistory(historyFileName: String,
                                  line: DabbleHistoryLine,
                                  hlaw: HistoryLinesAndWarnings,
-                                 historyPrinter: DabbleHistoryLine => String):DabbleScript[ExecutionResult2] = {
-     combineEV(launchDabble(line),
-               saveHistoryFile(historyFileName,
-                               line,
-                               hlaw,
-                               historyPrinter))
+                                 historyPrinter: DabbleHistoryLine => String):DabbleScript[ErrorOr[Unit]] = {
+    for {
+     _      <- launchDabble(line)
+     result <- saveHistoryFile(historyFileName,
+                        line,
+                        hlaw,
+                        historyPrinter)
+    } yield result
   }
 
   //TODO: Write out log at source or error or return error in an ExecutionResult2?
@@ -142,55 +133,39 @@ object DependencyCommands {
       import scala.collection.mutable.LinkedHashSet
       import scalaz.\&/._
 
-      val (errors, warnings, hLines) =
+      val hLines =
         hlaw match {
           //All failures
-          case This(_) =>
-            val truncationNotice = s"All history lines are in error. $filename will be truncated."
-            (Seq(truncationNotice), Seq.empty, Seq.empty)
+          case This(_) => Seq.empty
 
           //Only successes!
-          case That(successes) => (Seq.empty, Seq.empty, successes)
+          case That(successes) => successes
 
           //Mix of successes and failures, could be both are empty (as for empty history file)
-          case Both(warnings, successes) => (Seq.empty, warnings, successes)
+          case Both(_, successes) => successes
         }
 
       val uniqueHLines = LinkedHashSet() ++ (selection +: hLines)
-      writeFile(filename, uniqueHLines.map(historyPrinter).toSeq) flatMap {
-        case e@(-\/(_)) => liftDS(e)
-        case s@(\/-(_)) =>
-          if (errors.nonEmpty)
-            newlinesDS(1).flatMap(nl =>
-              log(s"Dabble has the following errors:${nl}${tabAsSpaces}${errors.mkString(nl + tabAsSpaces)}").map(_ => s)
-            )
-          else if (warnings.nonEmpty) newlinesDS(1).flatMap(nl =>
-            log(s"Dabble could not parse the following history lines:${nl}${tabAsSpaces}${warnings.mkString(nl + tabAsSpaces)}")).map(_ => s)
-          else liftDS(s)
-      }
+      writeFile(filename, uniqueHLines.map(historyPrinter).toSeq)
     }
 
   //program
   def launchSbtConsole(historyFileName: String,
                        line: DabbleHistoryLine,
                        argParser: CommandlineParser,
-                       historyPrinter: DabbleHistoryLine => String): DabbleScript[Unit] = for {
-    er2 <- loadHistoryFile(historyFileName, argParser).flatMap {
-            case -\/(error) =>
-              liftDS(ExecutionResult2(
-                      Option(s"could not read history file: $historyFileName due to: $error"),
-                      UnsuccessfulAction))
-            case \/-(hlaw) => launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter)
+                       historyPrinter: DabbleHistoryLine => String): DabbleScript[ExecutionResult2] =
+    loadHistoryFile(historyFileName, argParser).flatMap {
+        case -\/(error) =>
+          liftDS(ExecutionResult2(
+                  Option(s"could not read history file: $historyFileName due to: $error"),
+                  UnsuccessfulAction))
+        case \/-(hlaw) =>
+          for {
+            _ <- logDabbleVersion
+            //we should resolve any errors from HLAW here
+            result <- launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter)
+          } yield result.fold(l => ExecutionResult2(Option(l), UnsuccessfulAction),
+                              _ => withResult(SuccessfulAction))
     }
-
-    _ <- er2 match {
-      case ExecutionResult2(_, SuccessfulAction) =>
-        log(s"Dabble completed successfully") >> exit(er2)
-      case ExecutionResult2(Some(error), UnsuccessfulAction) =>
-        log(s"Dabble failed with the following error: $error") >> exit(er2)
-      case ExecutionResult2(None, UnsuccessfulAction) =>
-        log(s"Dabble failed with errors.") >> exit(er2)
-    }
-  } yield ()
 }
 

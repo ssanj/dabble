@@ -47,7 +47,14 @@ object DabbleDslRunner extends App {
                                historyPrinter).
               foldMap(new DabbleConsoleInterpreter)).
             toDisjunction.
-            fold(x => println(s"dabble failed with ${x.getMessage}"), r => ())
+            fold(x => println(s"dabble failed with ${x.getMessage}"), {
+              case ExecutionResult2(_, SuccessfulAction) =>
+                println(s"Dabble completed successfully")
+              case ExecutionResult2(Some(error), UnsuccessfulAction) =>
+                println(s"Dabble failed with the following error: $error")
+              case ExecutionResult2(None, UnsuccessfulAction) =>
+                println(s"Dabble failed with errors.")
+            })
       }
   }
 
