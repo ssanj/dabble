@@ -15,20 +15,20 @@ object DabbleDslDef {
 
   type ErrorOr[A] = String \/ A
 
-  final case class ErrorOrAOps[A](value: ErrorOr[A]) {
-    def toDabbleResult: DabbleResult[A] = value.fold(l =>  l.failureNel[SuccessResult[String, A]],
-                                                     r => SuccessResult(Seq.empty, r).successNel[String])
-  }
+  // final case class ErrorOrAOps[A](value: ErrorOr[A]) {
+  //   def toDabbleResult: DabbleResult[A] = value.fold(l =>  l.failureNel[SuccessResult[String, A]],
+  //                                                    r => SuccessResult(Seq.empty, r).successNel[String])
+  // }
 
-  final case class SuccessResult[W, S](warnings: Seq[W], success: S)
+  // final case class SuccessResult[W, S](warnings: Seq[W], success: S)
 
-  object ErrorOr {
-    implicit def toErrorOrOpsFromErrorOr[A](value: ErrorOr[A]): ErrorOrAOps[A] = ErrorOrAOps[A](value)
-  }
+  // object ErrorOr {
+  //   implicit def toErrorOrOpsFromErrorOr[A](value: ErrorOr[A]): ErrorOrAOps[A] = ErrorOrAOps[A](value)
+  // }
 
-  type FailureNelOrSuccessResult[F, W, S] = ValidationNel[F, SuccessResult[W, S]]
+  // type FailureNelOrSuccessResult[F, W, S] = ValidationNel[F, SuccessResult[W, S]]
 
-  type DabbleResult[A] = FailureNelOrSuccessResult[String, String, A]
+  // type DabbleResult[A] = FailureNelOrSuccessResult[String, String, A]
 
 
   sealed trait DabbleDsl[A]

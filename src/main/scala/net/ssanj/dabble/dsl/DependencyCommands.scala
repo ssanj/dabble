@@ -7,7 +7,7 @@ import scalaz._
 import scalaz.syntax.bind._
 import DabbleHistory._
 import DabbleDslDef._
-import ExecutionResult2._
+import DabbleResult._
 import DabblePaths._
 import DefaultTemplate._
 import CommonCommands._
@@ -153,19 +153,19 @@ object DependencyCommands {
   def launchSbtConsole(historyFileName: String,
                        line: DabbleHistoryLine,
                        argParser: CommandlineParser,
-                       historyPrinter: DabbleHistoryLine => String): DabbleScript[ExecutionResult2] =
+                       historyPrinter: DabbleHistoryLine => String): DabbleScript[DabbleResult] =
     loadHistoryFile(historyFileName, argParser).flatMap {
         case -\/(error) =>
-          liftDS(ExecutionResult2(
-                  Option(s"could not read history file: $historyFileName due to: $error"),
-                  UnsuccessfulAction))
+          liftDS(dabbleFailure(s"could not read history file: $historyFileName due to: $error"))
+
         case \/-(hlaw) =>
           for {
             _ <- logDabbleVersion
-            //we should resolve any errors from HLAW here
+            //we should resolve any errors from HLAW here -we could just dump the warnings and errors here
             result <- launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter)
-          } yield result.fold(l => ExecutionResult2(Option(l), UnsuccessfulAction),
-                              _ => withResult(SuccessfulAction))
+            warnings = hlaw.fold(identity, _ => Seq.empty[String], (l, r) => l)
+          } yield result.fold(l => dabbleFailure(l, warnings:_*),
+                              _ => dabbleSuccess(warnings))
     }
 }
 

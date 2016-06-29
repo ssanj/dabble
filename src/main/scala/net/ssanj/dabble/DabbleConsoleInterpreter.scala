@@ -7,6 +7,7 @@ import ammonite.ops._
 import scalaz._
 import scalaz.Id.Id
 import scalaz.syntax.std.`try`._
+import scalaz.syntax.either._
 
 import DabbleDslDef._
 
@@ -38,14 +39,15 @@ class DabbleConsoleInterpreter extends (DabbleDsl ~> Id) {
         toDisjunction.
         leftMap(x => s"Could not read system property: $key due to: ${x.getMessage}")
 
+    //This could return an IoError of type CallError(errorCode, throwable)
     case CallProcess(filename: String, arguments: String, workingDir: String) =>
       Try(%(filename, arguments)(Path(workingDir))).
       toDisjunction.
-      map(code =>
-          ExecutionResult2(None,
-                          if (code == 0) SuccessfulAction
-                          else UnsuccessfulAction)).
-      leftMap(x => s"Could not run dabble due to: ${x.getMessage}. See sbt log for details.")
+      leftMap(x => s"Could not run dabble due to: ${x.getMessage}. See sbt log for details.").
+      fold(error => error.left[Unit],
+           code  => if (code == 0) ().right[String]
+                    else s"Execution error: $filename exited with $code".left[Unit]
+      )
 
     case Exit(er: ExecutionResult2) => System.exit(er.code.code)
 
