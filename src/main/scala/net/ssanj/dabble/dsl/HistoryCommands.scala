@@ -8,6 +8,7 @@ import scalaz.syntax.either._
 import scalaz.syntax.bind._
 
 import ExecutionResult2._
+import DabbleResult._
 import DabbleHistory._
 
 
@@ -117,31 +118,29 @@ object HistoryCommands {
     log(hMenu(hLines)) >> getUserChoice(prompt, hLines)
   }
 
-  def exitWithError(message: String): DabbleScript[ExecutionResult2] = {
-    liftDS(ExecutionResult2(Option(message), UnsuccessfulAction))
-  }
-
   // //4. Program
   def historyProgram(searchTerm: Option[String],
                      historyFileName: String,
                      argParser: CommandlineParser,
                      hMenu: HistoryMenu,
                      prompt: String,
-                     historyPrinter: DabbleHistoryLine => String): DabbleScript[ExecutionResult2] = for {
+                     historyPrinter: DabbleHistoryLine => String): DabbleScript[DabbleResult] = for {
     //TODO: Simplify readHistoryFile to return Seq.empty if the history file is not found.
     //TODO: readHistoryFile is going to be common. Pull it out.
     //TODO: Do we need to distinguish between an empty history file and an absent one?
     hasHistoryFile <- fileExists(historyFileName)
-    result <- if (!hasHistoryFile) noHistory.map(_ => withResult(SuccessfulAction))
+    result <- if (!hasHistoryFile) noHistory.map(_ => dabbleSuccess)
               else readHistoryFile(historyFileName, argParser).flatMap {
-              case -\/(error) => exitWithError(s"could not read history file: $historyFileName due to: $error")
+              case -\/(error) =>
+                liftDS(dabbleFailure(s"could not read history file: $historyFileName due to: $error"))
               case \/-(hlaw) =>
                 chooseHistory(searchTerm, prompt, hlaw, hMenu).flatMap {
-                  case QuitHistory => liftDS(withResult(SuccessfulAction))
+                  case QuitHistory => liftDS(dabbleSuccess)
                   case HistorySelection(line) =>
+                    val warnings = hlaw.fold(identity, _ => Seq.empty[String], (l, _) => l)
                     launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter).
-                      map(_.fold(l => ExecutionResult2(Option(l), UnsuccessfulAction),
-                                 _ => withResult(SuccessfulAction)))
+                      map(_.fold(l => dabbleFailure(l, warnings:_*),
+                                 _ => dabbleSuccess(warnings)))
 
                 }
            }

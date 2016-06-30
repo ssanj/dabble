@@ -4,7 +4,7 @@ import scala.util.Try
 
 import ammonite.ops._
 
-import scalaz.{-\/, \/-}
+import scalaz.{-\/, \/-, \/}
 import scalaz.syntax.either._
 import scalaz.NonEmptyList.nels
 import scalaz.syntax.std.`try`._
@@ -41,25 +41,15 @@ object DabbleDslRunner extends App {
 
           getBanner.foreach(println)
 
-          Try(launchSbtConsole(dabbleHome.history.toString,
-                               line,
-                               argParser,
-                               historyPrinter).
-              foldMap(new DabbleConsoleInterpreter)).
-            toDisjunction.
-            fold(x => println(s"Dabble failed with: ${x.getMessage}"), {
-              case DabbleSuccess(Seq()) =>
-                println(s"Dabble completed successfully.")
-              case DabbleSuccess(warnings) =>
-                println(s"Dabble completed successfully, but had the following warnings:${newline}")
-                warnings.foreach { w => println(w) }
-              case DabbleFailure(failures) =>
-                println(s"Dabble failed with the following error:${newline}${failures.head}")
-                if (failures.tail.nonEmpty) {
-                  println(s"${newline}and had the following warnings:${newline}")
-                  failures.tail.toList.foreach { w => println(w) }
-                } else {}
-            })
+          val result =
+            Try(launchSbtConsole(dabbleHome.history.toString,
+                                 line,
+                                 argParser,
+                                 historyPrinter).
+                foldMap(new DabbleConsoleInterpreter)).
+              toDisjunction
+
+          handleProgramResult(result)
       }
   }
 
@@ -75,21 +65,33 @@ object DabbleDslRunner extends App {
       }.mkString(newline)
     }
 
-    Try(historyProgram(searchTerm,
-                       dabbleHome.history.toString,
-                       argParser,
-                       hMenu,
-                       "Please select a menu number or 'q' to quit.",
-                       historyPrinter).
-        foldMap(new DabbleConsoleInterpreter)).
-      toDisjunction.
-      fold(x => println(s"dabble failed with: ${x.getMessage}"), {
-        case ExecutionResult2(_, SuccessfulAction) =>
-          println(s"Dabble completed successfully")
-        case ExecutionResult2(errors, UnsuccessfulAction) =>
-          println(errors.
-                    map(e => s"Dabble exited with the following errors: $e").
-                    getOrElse("Dabble exited with errors."))
+    val result =
+      Try(historyProgram(searchTerm,
+                         dabbleHome.history.toString,
+                         argParser,
+                         hMenu,
+                         "Please select a menu number or 'q' to quit.",
+                         historyPrinter).
+          foldMap(new DabbleConsoleInterpreter)).
+        toDisjunction
+
+      handleProgramResult(result)
+  }
+
+  private def handleProgramResult(result: Throwable \/ DabbleResult): Unit = {
+    result.
+      fold(x => println(s"Dabble failed with: ${x.getMessage}"), {
+        case DabbleSuccess(Seq()) =>
+          println(s"Dabble completed successfully.")
+        case DabbleSuccess(warnings) =>
+          println(s"Dabble completed successfully, but had the following warnings:${newline}")
+          warnings.foreach { w => println(w) }
+        case DabbleFailure(failures) =>
+          println(s"Dabble failed with the following error:${newline}${failures.head}")
+          if (failures.tail.nonEmpty) {
+            println(s"${newline}and had the following warnings:${newline}")
+            failures.tail.toList.foreach { w => println(w) }
+          } else {}
       })
   }
 
