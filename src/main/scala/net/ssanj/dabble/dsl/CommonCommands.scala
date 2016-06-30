@@ -62,5 +62,14 @@ object CommonCommands {
              else readHistoryFile(historyFileName, argParser)
   } yield hlawE
 
+  def getHistoryLines(hlaw: HistoryLinesAndWarnings): Seq[DabbleHistoryLine] = {
+     hlaw.onlyThat.orElse(
+      hlaw.onlyBoth.map(_._2)
+     ).getOrElse(Seq.empty[DabbleHistoryLine])
+  }
+
+  def getWarnings(hlaw: HistoryLinesAndWarnings): Seq[String] = {
+    hlaw.fold(identity, _ => Seq.empty[String], (l, _) => l)
+  }
 }
 

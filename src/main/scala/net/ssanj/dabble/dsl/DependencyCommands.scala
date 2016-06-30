@@ -1,6 +1,8 @@
 package net.ssanj.dabble
 package dsl
 
+import scala.collection.mutable.LinkedHashSet
+
 import ammonite.ops._
 
 import scalaz._
@@ -112,38 +114,12 @@ object DependencyCommands {
     log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
   }
 
-  //TODO: Figure out what to do about HLAW.
-  def launchDabbleAndSaveHistory(historyFileName: String,
-                                 line: DabbleHistoryLine,
-                                 hlaw: HistoryLinesAndWarnings,
-                                 historyPrinter: DabbleHistoryLine => String):DabbleScript[ErrorOr[Unit]] = {
-    for {
-     _      <- launchDabble(line)
-     result <- saveHistoryFile(historyFileName,
-                        line,
-                        hlaw,
-                        historyPrinter)
-    } yield result
-  }
-
   //TODO: Write out log at source or error or return error in an ExecutionResult2?
-  def saveHistoryFile(filename: String, selection: DabbleHistoryLine, hlaw: HistoryLinesAndWarnings,
-    historyPrinter: DabbleHistoryLine => String):
+  def saveHistoryFile(filename: String,
+                      selection: DabbleHistoryLine,
+                      hLines: Seq[DabbleHistoryLine],
+                      historyPrinter: DabbleHistoryLine => String):
     DabbleScript[ErrorOr[Unit]] = {
-      import scala.collection.mutable.LinkedHashSet
-      import scalaz.\&/._
-
-      val hLines =
-        hlaw match {
-          //All failures
-          case This(_) => Seq.empty
-
-          //Only successes!
-          case That(successes) => successes
-
-          //Mix of successes and failures, could be both are empty (as for empty history file)
-          case Both(_, successes) => successes
-        }
 
       val uniqueHLines = LinkedHashSet() ++ (selection +: hLines)
       writeFile(filename, uniqueHLines.map(historyPrinter).toSeq)
@@ -160,12 +136,17 @@ object DependencyCommands {
 
         case \/-(hlaw) =>
           for {
-            _ <- logDabbleVersion
-            //we should resolve any errors from HLAW here -we could just dump the warnings and errors here
-            result <- launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter)
-            warnings = hlaw.fold(identity, _ => Seq.empty[String], (l, r) => l)
-          } yield result.fold(l => dabbleFailure(l, warnings:_*),
-                              _ => dabbleSuccess(warnings))
+            _      <- logDabbleVersion
+            _      <- launchDabble(line)
+            result <- saveHistoryFile(historyFileName,
+                                      line,
+                                      getHistoryLines(hlaw),
+                                      historyPrinter)
+          } yield {
+            val warnings = getWarnings(hlaw)
+            result.fold(l => dabbleFailure(l, warnings:_*),
+                        _ => dabbleSuccess(warnings))
+          }
     }
 }
 

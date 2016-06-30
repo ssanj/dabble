@@ -7,7 +7,6 @@ import scalaz._
 import scalaz.syntax.either._
 import scalaz.syntax.bind._
 
-import ExecutionResult2._
 import DabbleResult._
 import DabbleHistory._
 
@@ -137,11 +136,17 @@ object HistoryCommands {
                 chooseHistory(searchTerm, prompt, hlaw, hMenu).flatMap {
                   case QuitHistory => liftDS(dabbleSuccess)
                   case HistorySelection(line) =>
-                    val warnings = hlaw.fold(identity, _ => Seq.empty[String], (l, _) => l)
-                    launchDabbleAndSaveHistory(historyFileName, line, hlaw, historyPrinter).
-                      map(_.fold(l => dabbleFailure(l, warnings:_*),
-                                 _ => dabbleSuccess(warnings)))
-
+                    for {
+                      _      <- launchDabble(line)
+                      result <- saveHistoryFile(historyFileName,
+                                                line,
+                                                getHistoryLines(hlaw),
+                                                historyPrinter)
+                    } yield {
+                      val warnings = getWarnings(hlaw)
+                      result.fold(l => dabbleFailure(l, warnings:_*),
+                                  _ => dabbleSuccess(warnings))
+                    }
                 }
            }
   } yield result
