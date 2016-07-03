@@ -9,6 +9,7 @@ import scalaz.syntax.bind._
 
 import DabbleResult._
 import DabbleHistory._
+import DabblePathTypes._
 
 
 import DabbleDslDef._
@@ -119,7 +120,7 @@ object HistoryCommands {
 
   // //4. Program
   def historyProgram(searchTerm: Option[String],
-                     historyFileName: String,
+                     dabbleHomePath: DabbleHomePath,
                      argParser: CommandlineParser,
                      hMenu: HistoryMenu,
                      prompt: String,
@@ -127,18 +128,18 @@ object HistoryCommands {
     //TODO: Simplify readHistoryFile to return Seq.empty if the history file is not found.
     //TODO: readHistoryFile is going to be common. Pull it out.
     //TODO: Do we need to distinguish between an empty history file and an absent one?
-    hasHistoryFile <- fileExists(historyFileName)
+    hasHistoryFile <- fileExists(dabbleHomePath.history.path.file)
     result <- if (!hasHistoryFile) noHistory.map(_ => dabbleSuccess)
-              else readHistoryFile(historyFileName, argParser).flatMap {
+              else readHistoryFile(dabbleHomePath.history.path.file, argParser).flatMap {
               case -\/(error) =>
-                liftDS(dabbleFailure(s"could not read history file: $historyFileName due to: $error"))
+                liftDS(dabbleFailure(s"could not read history file: ${dabbleHomePath.history.path.file} due to: $error"))
               case \/-(hlaw) =>
                 chooseHistory(searchTerm, prompt, hlaw, hMenu).flatMap {
                   case QuitHistory => liftDS(dabbleSuccess)
                   case HistorySelection(line) =>
                     for {
-                      _      <- launchDabble(line)
-                      result <- saveHistoryFile(historyFileName,
+                      _      <- launchDabble(dabbleHomePath, line)
+                      result <- saveHistoryFile(dabbleHomePath.history.path.file,
                                                 line,
                                                 getHistoryLines(hlaw),
                                                 historyPrinter)

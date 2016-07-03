@@ -11,6 +11,7 @@ import scalaz.syntax.std.`try`._
 
 import DabbleDslDef._
 import DabblePaths._
+import DabblePathTypes._
 import DabbleHistory._
 import DependencyParser._
 import ResolverParser._
@@ -42,7 +43,7 @@ object DabbleDslRunner extends App {
           getBanner.foreach(println)
 
           val result =
-            Try(launchSbtConsole(dabbleHome.history.toString,
+            Try(launchSbtConsole(dabbleHomePath(userHome),
                                  line,
                                  argParser,
                                  historyPrinter).
@@ -67,7 +68,7 @@ object DabbleDslRunner extends App {
 
     val result =
       Try(historyProgram(searchTerm,
-                         dabbleHome.history.toString,
+                         dabbleHomePath(userHome),
                          argParser,
                          hMenu,
                          "Please select a menu number or 'q' to quit.",

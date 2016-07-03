@@ -10,7 +10,8 @@ import scalaz.syntax.bind._
 import DabbleHistory._
 import DabbleDslDef._
 import DabbleResult._
-import DabblePaths._
+// import DabblePaths._
+import DabblePathTypes._
 import DefaultTemplate._
 import CommonCommands._
 import DabblePrinter._
@@ -19,14 +20,14 @@ import ResolverParser._
 object DependencyCommands {
 
   //TODO: split this method up
-  def launchDabble(line: DabbleHistoryLine): DabbleScript[ErrorOr[Unit]] = for {
+  def launchDabble(dabbleHomePath: DabbleHomePath, line: DabbleHistoryLine): DabbleScript[ErrorOr[Unit]] = for {
     lineSeparator       <- newlinesDS(1)
     dependencies        = line.dependencies.list.toList
     resolvers           = line.resolvers
     mpVersion           = line.mpVersion
 
-    defaultSbtTemplate  = dabbleHome.path/defaultBuildFile
-    outputSBTFile       = dabbleHome.work.path/defaultBuildFile
+    defaultSbtTemplate  = dabbleHomePath.defaultBuildFile.path.file
+    outputSBTFile       = dabbleHomePath.work.defaultBuildFile.path.file
 
     doubleLineSepator = s"${lineSeparator}${lineSeparator}"
 
@@ -51,7 +52,7 @@ object DependencyCommands {
                   formattedMacroParadise       +
                   initialCommands))
 
-   result <- executeSbt
+   result <- executeSbt(dabbleHomePath)
 
   } yield result
 
@@ -64,9 +65,9 @@ object DependencyCommands {
     }
   } yield sbtExec
 
-  def executeSbt: DabbleScript[ErrorOr[Unit]] = for {
+  def executeSbt(dabbleHomePath: DabbleHomePath): DabbleScript[ErrorOr[Unit]] = for {
     sbt <- getSBTExec
-    result <- callProcess(sbt, "console-quick", dabbleHome.work.path.toString)
+    result <- callProcess(sbt, "console-quick", dabbleHomePath.work.path.dir)
   } yield result
 
   private def getInitialCommands(dependencies: Seq[Dependency], resolvers: Seq[Resolver],
@@ -126,19 +127,19 @@ object DependencyCommands {
     }
 
   //program
-  def launchSbtConsole(historyFileName: String,
+  def launchSbtConsole(dabbleHomePath: DabbleHomePath,
                        line: DabbleHistoryLine,
                        argParser: CommandlineParser,
                        historyPrinter: DabbleHistoryLine => String): DabbleScript[DabbleResult] =
-    loadHistoryFile(historyFileName, argParser).flatMap {
+    loadHistoryFile(dabbleHomePath.history.path.file, argParser).flatMap {
         case -\/(error) =>
-          liftDS(dabbleFailure(s"could not read history file: $historyFileName due to: $error"))
+          liftDS(dabbleFailure(s"could not read history file: ${dabbleHomePath.history.path.file} due to: $error"))
 
         case \/-(hlaw) =>
           for {
             _      <- logDabbleVersion
-            _      <- launchDabble(line)
-            result <- saveHistoryFile(historyFileName,
+            _      <- launchDabble(dabbleHomePath, line)
+            result <- saveHistoryFile(dabbleHomePath.history.path.file,
                                       line,
                                       getHistoryLines(hlaw),
                                       historyPrinter)
