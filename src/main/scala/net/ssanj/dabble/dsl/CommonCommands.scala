@@ -71,5 +71,15 @@ object CommonCommands {
   def getWarnings(hlaw: HistoryLinesAndWarnings): Seq[String] = {
     hlaw.fold(identity, _ => Seq.empty[String], (l, _) => l)
   }
+
+  //DabbleScript[String \/ A]
+  type DabbleScriptErrorOr[A] = EitherT[DabbleScript, String, A]
+
+  object DabbleScriptErrorOr {
+    def liftScriptErrorOr[A](scriptEOA: DabbleScript[ErrorOr[A]]): DabbleScriptErrorOr[A] = EitherT[DabbleScript, String, A](scriptEOA)
+    def liftScript[A](script: DabbleScript[A]): DabbleScriptErrorOr[A] = EitherT[DabbleScript, String, A](script.map(_.right[String]))
+    def liftError[A](error: String): DabbleScriptErrorOr[A] = EitherT[DabbleScript, String, A](liftDS(error.left[A]))
+    def liftValue[A](value: A): DabbleScriptErrorOr[A] = liftScript[A](liftDS(value))
+  }
 }
 
