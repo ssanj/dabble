@@ -1,0 +1,51 @@
+Windows 10
+Windows Server 2016 Technical Preview 10.0
+Windows 8.1
+Windows Server 2012 R2
+Windows 8
+Windows Server 2012
+Windows 7
+Windows Server 2008 R2
+Windows Server 2008
+Windows Vista
+Windows Server 2003 R2
+Windows Server 2003
+Mac OS X 10.7 Lion
+Mac OS X 10.7.0 (Intel)
+Mac OS X 10.7.1 (Intel)
+Mac OS X 10.7.2 (Intel)
+Mac OS X 10.7.3 (Intel)
+Mac OS X 10.7.4 (Intel)
+Mac OS X 10.7.5 (Intel)
+Mac OS X 10.8 Mountain Lion
+Mac OS X 10.8.0
+Mac OS X 10.8.1
+Mac OS X 10.8.2
+Mac OS X 10.8.3
+Mac OS X 10.8.4
+Mac OS X 10.8.5
+OS X 10.9 Mavericks
+OS X 10.9.0
+OS X 10.9.1
+OS X 10.9.2
+OS X 10.9.3
+OS X 10.9.4
+OS X 10.9.5
+OS X 10.10 Yosemite
+OS X 10.10.0 public beta
+OS X 10.10.0
+OS X 10.10.1
+OS X 10.10.2
+OS X 10.10.3
+OS X 10.10.4
+OS X 10.10.5
+OS X 10.11 El Capitan
+OS X 10.11.0 public beta
+OS X 10.11.0
+OS X 10.11.1
+OS X 10.11.2
+OS X 10.11.3
+OS X 10.11.4
+Linux java8 3.13.0-37-generic
+Linux 3.16.0-4-amd64
+HP-UX

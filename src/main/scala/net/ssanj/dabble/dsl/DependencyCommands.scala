@@ -55,7 +55,7 @@ object DependencyCommands {
   } yield sbtExec
 
   def executeSbt(dabbleHomePath: DabbleHomePath): DabbleScript[ErrorOr[Unit]] = for {
-    sbt <- getSBTExec
+    sbt    <- getSBTExec
     result <- callProcess(sbt, "console-quick", dabbleHomePath.work.path.dir)
   } yield result
 
