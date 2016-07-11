@@ -111,6 +111,44 @@ trait DabblePrinter {
                                                  replace("\t", "\\\\t").
                                                  replace("\"", "\\\"")
 
+  /** Prints initial commands on launching SBT.
+    *
+    * @example {{{
+    * Dabble injected the following libraries:
+    * [1] org.scalaz %% scalaz-core % 7.1.4
+    * [2] org.scalatest %% scalatest % 2.2.4
+    * }}}
+    *
+    * @param dependencies Dependencies
+    * @param resolvers Resolvers
+    * @param mpVersion Macro paradise version
+    */
+  def printInitialSbtCommands(dependencies: Seq[Dependency], resolvers: Seq[Resolver],
+    mpVersion: Option[String]): String = {
+
+    val dependencyText = printLibraryDependenciesText(dependencies)
+
+    val resolverText   = printResolversAsText(resolvers)
+
+    val depString      = s"${newline}Dabble injected the following libraries:" +
+                          s"${newline}${dependencyText}${newline}"
+
+    val resolverString = if (resolvers.nonEmpty) {
+                          s"${newline}Dabble injected the following resolvers:" +
+                           s"${newline}${resolverText}${newline}"
+                         } else ""
+
+    val cpString       = mpVersion.fold("")(v => s"${newline}Dabble injected macro paradise version:" +
+                                                  s" ${v}${newline}")
+    val injections     = depString      +
+                         resolverString +
+                         cpString
+
+    val replString     = s"""println("${injections}")"""
+
+    s"""initialCommands := "${replEscaped(replString)}""""
+  }
+
   def printMacroParadise(version: String): String =
     s"""addCompilerPlugin("org.scalamacros" % "paradise" % "${version}" cross CrossVersion.full)"""
 

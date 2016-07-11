@@ -10,7 +10,6 @@ import scalaz.syntax.bind._
 import DabbleHistory._
 import DabbleDslDef._
 import DabbleResult._
-// import DabblePaths._
 import DabblePathTypes._
 import DefaultTemplate._
 import CommonCommands._
@@ -27,8 +26,8 @@ object DependencyCommands {
     val resolvers           = line.resolvers
     val mpVersion           = line.mpVersion
 
-    val doubleLineSepator = s"${lineSeparator}${lineSeparator}"
-    val initialCommands     = getInitialCommands(dependencies, resolvers, mpVersion)(lineSeparator)
+    val doubleLineSepator   = s"${lineSeparator}${lineSeparator}"
+    val initialCommands     = printInitialSbtCommands(dependencies, resolvers, mpVersion)
 
     val sbtDependencyString = printLibraryDependency(dependencies)
     val sbtResolverString   = printResolvers(resolvers)
@@ -58,32 +57,6 @@ object DependencyCommands {
     sbt    <- getSBTExec
     result <- callProcess(sbt, "console-quick", dabbleHomePath.work.path.dir)
   } yield result
-
-  private def getInitialCommands(dependencies: Seq[Dependency], resolvers: Seq[Resolver],
-    mpVersion: Option[String])(lineSeparator: String): String = {
-
-    val dependencyText = printLibraryDependenciesText(dependencies)
-
-    val resolverText   = printResolversAsText(resolvers)
-
-    val depString      = s"${lineSeparator}Dabble injected the following libraries:" +
-                          s"${lineSeparator}${dependencyText}${lineSeparator}"
-
-    val resolverString = if (resolvers.nonEmpty) {
-                          s"${lineSeparator}Dabble injected the following resolvers:" +
-                           s"${lineSeparator}${resolverText}${lineSeparator}"
-                         } else ""
-
-    val cpString       = mpVersion.fold("")(v => s"${lineSeparator}Dabble injected macro paradise version:" +
-                                                  s" ${v}${lineSeparator}")
-    val injections     = depString      +
-                         resolverString +
-                         cpString
-
-    val replString     = s"""println("${injections}")"""
-
-    s"""initialCommands := "${replEscaped(replString)}""""
-  }
 
   def readSbtTemplateOrDefault(defaultSbtTemplate: String): DabbleScript[String] = {
     log(s"Using default sbt template at: ${defaultSbtTemplate}") >>

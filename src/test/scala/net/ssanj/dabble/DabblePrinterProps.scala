@@ -6,6 +6,7 @@ import org.scalacheck.Prop.BooleanOperators
 import scalaz.{\/-, NonEmptyList, Show}
 import scalaz.NonEmptyList.nels
 import net.ssanj.dabble.Implicits._
+import ScalaCheckSupport.contentProp
 
 object DabblePrinterProps             extends
        Properties("A Dependency Printer") with
@@ -90,6 +91,34 @@ object DabblePrinterProps             extends
 
     (output == expected) :| labeled(output, expected)
    }
+
+  property("print initial sbt commands") = {
+    Prop.forAllNoShrink(genDependencies, genResolversWithEmpty, genMacroParadise) {  (deps, resolvers, mp) =>
+      val initialCommands = printInitialSbtCommands(deps, resolvers, mp)
+
+      val dependencyText = printLibraryDependenciesText(deps)
+      val dependencyInfo = s"${newline}Dabble injected the following libraries:" +
+                           s"${newline}${dependencyText}${newline}"
+      val resolverInfo =
+        if (resolvers.nonEmpty) {
+          val resolverText = printResolversAsText(resolvers)
+          s"${newline}Dabble injected the following resolvers:" +
+          s"${newline}${resolverText}${newline}"
+        } else ""
+
+
+      val mpInfo = mp.fold(""){ mpv =>
+        s"${newline}Dabble injected macro paradise version: " +
+        s"${mpv}${newline}"
+      }
+
+      val commands = s"""println("${dependencyInfo + resolverInfo + mpInfo}")"""
+      val expectedCommands = s"""initialCommands := "${replEscaped(commands)}""""
+
+      contentProp("initialCommands")(Seq(initialCommands), Seq(expectedCommands))
+    }
+  }
+
 
  property("print history line") =
    Prop.forAll(genDabbleHistoryLine) {
