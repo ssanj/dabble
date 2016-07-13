@@ -119,6 +119,21 @@ object DabblePrinterProps             extends
     }
   }
 
+  property("should format SBT build file from template and history line") =
+   Prop.forAll(genSbtTemplateContent, genDabbleHistoryLine) { (template, dhl) =>
+     val sbtTemplate = template.content
+     val sbtBuildFile = formatSbtTemplate(sbtTemplate, dhl)
+     val doubleNewlines = s"${newline}${newline}"
+
+     val deps = dhl.dependencies.list.toList
+     val expectedBuildFile = sbtTemplate + doubleNewlines +
+                             (if (dhl.resolvers.nonEmpty) (printResolvers(dhl.resolvers) + doubleNewlines) else "") +
+                             printLibraryDependency(deps) + doubleNewlines +
+                             dhl.mpVersion.map(printMacroParadise(_) + doubleNewlines).getOrElse("") +
+                             printInitialSbtCommands(deps, dhl.resolvers, dhl.mpVersion)
+
+     contentProp("build.sbt")(Seq(sbtBuildFile), Seq(expectedBuildFile))
+   }
 
  property("print history line") =
    Prop.forAll(genDabbleHistoryLine) {

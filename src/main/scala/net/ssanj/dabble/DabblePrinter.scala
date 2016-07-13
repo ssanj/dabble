@@ -153,6 +153,30 @@ trait DabblePrinter {
     s"""addCompilerPlugin("org.scalamacros" % "paradise" % "${version}" cross CrossVersion.full)"""
 
 
+  def formatSbtTemplate(sbtTemplateContent: String, line: DabbleHistoryLine): String = {
+    val dependencies        = line.dependencies.list.toList
+    val resolvers           = line.resolvers
+    val mpVersion           = line.mpVersion
+
+    val doubleLineSepator   = s"${newline}${newline}"
+    val initialCommands     = printInitialSbtCommands(dependencies, resolvers, mpVersion)
+
+    val sbtDependencyString = printLibraryDependency(dependencies)
+    val sbtResolverString   = printResolvers(resolvers)
+
+    val formattedSbtTemplateContent  = sbtTemplateContent + doubleLineSepator
+    val formattedSbtDependencyString = sbtDependencyString + doubleLineSepator
+    val formattedResolverString      = (if (resolvers.nonEmpty) (sbtResolverString + doubleLineSepator) else "")
+    val formattedMacroParadise       = mpVersion.map(printMacroParadise).fold("")(_ + doubleLineSepator)
+
+    formattedSbtTemplateContent  +
+    formattedResolverString      +
+    formattedSbtDependencyString +
+    formattedMacroParadise       +
+    initialCommands
+  }
+
+
   def printHistoryLines(lines: Seq[DabbleHistoryLine]): String =
     lines.map(printHistoryLine).mkString(newline)
 

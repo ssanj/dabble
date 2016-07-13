@@ -13,7 +13,7 @@ import DabbleResult._
 import DabblePathTypes._
 import DefaultTemplate._
 import CommonCommands._
-import DabblePrinter._
+import DabblePrinter.formatSbtTemplate
 import ResolverParser._
 
 object DependencyCommands {
@@ -21,28 +21,6 @@ object DependencyCommands {
   //TODO: Delete once we have the EitherT sorted out
   def launchDabble(dabbleHomePath: DabbleHomePath, line: DabbleHistoryLine): DabbleScript[ErrorOr[Unit]] = ???
   //TODO: split this method up
-  def genSbtContent(lineSeparator: String, sbtTemplateContent: String, line: DabbleHistoryLine): String = {
-    val dependencies        = line.dependencies.list.toList
-    val resolvers           = line.resolvers
-    val mpVersion           = line.mpVersion
-
-    val doubleLineSepator   = s"${lineSeparator}${lineSeparator}"
-    val initialCommands     = printInitialSbtCommands(dependencies, resolvers, mpVersion)
-
-    val sbtDependencyString = printLibraryDependency(dependencies)
-    val sbtResolverString   = printResolvers(resolvers)
-
-    val formattedSbtTemplateContent  = sbtTemplateContent + doubleLineSepator
-    val formattedSbtDependencyString = sbtDependencyString + doubleLineSepator
-    val formattedResolverString      = (if (resolvers.nonEmpty) (sbtResolverString + doubleLineSepator) else "")
-    val formattedMacroParadise       = mpVersion.map(printMacroParadise).fold("")(_ + doubleLineSepator)
-
-    formattedSbtTemplateContent  +
-    formattedResolverString      +
-    formattedSbtDependencyString +
-    formattedMacroParadise       +
-    initialCommands
-  }
 
   def getSBTExec: DabbleScript[String] = for {
     sbtE <- systemProp("os.name")
@@ -105,7 +83,7 @@ object DependencyCommands {
         sbtTemplateContent  <- liftScript(fileExists(defaultSbtTemplate).
                                 ifM(readSbtTemplateOrDefault(defaultSbtTemplate),
                                     useInMemoryTemplate))
-        sbtBuildContent = genSbtContent(lineSeparator, sbtTemplateContent, line)
+        sbtBuildContent = formatSbtTemplate(sbtTemplateContent, line)
         _ <- liftScriptErrorOr(writeFile(outputSBTFile, Seq(sbtBuildContent)))
         _ <- liftScriptErrorOr(executeSbt(dabbleHomePath))
         _ <- liftScriptErrorOr(saveHistoryFile(dabbleHomePath.history.path.file,
