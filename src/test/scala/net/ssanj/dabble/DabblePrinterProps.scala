@@ -132,7 +132,7 @@ object DabblePrinterProps             extends
                              dhl.mpVersion.map(printMacroParadise(_) + doubleNewlines).getOrElse("") +
                              printInitialSbtCommands(deps, dhl.resolvers, dhl.mpVersion)
 
-     contentProp("build.sbt")(Seq(sbtBuildFile), Seq(expectedBuildFile))
+      contentProp("build.sbt")(Seq(sbtBuildFile), Seq(expectedBuildFile))
    }
 
  property("print history line") =

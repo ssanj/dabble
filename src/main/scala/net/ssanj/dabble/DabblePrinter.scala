@@ -153,6 +153,16 @@ trait DabblePrinter {
     s"""addCompilerPlugin("org.scalamacros" % "paradise" % "${version}" cross CrossVersion.full)"""
 
 
+  /** Formats the SBT build file given a template and a history line.
+    *
+    * The history line is appended to the supplied template. That way you can
+    * always customize your SBT template but override as needed through the
+    * history line.
+    *
+    *  @param sbtTemplateContent The base SBT template to use.
+    *  @param line The [[DabbleHistoryLine]] to insert into the template.
+    *  @see [[DabbleHistoryLine]]
+    */
   def formatSbtTemplate(sbtTemplateContent: String, line: DabbleHistoryLine): String = {
     val dependencies        = line.dependencies.list.toList
     val resolvers           = line.resolvers
