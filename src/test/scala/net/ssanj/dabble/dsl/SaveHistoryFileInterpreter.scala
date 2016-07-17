@@ -33,6 +33,8 @@ final class SaveHistoryFileInterpreter(world: MMap[String, Seq[String]]) extends
         ().right
       }
 
+    case FileExists(filename) => world.get(filename) ? true | false
+
     case ReadFile(filename) =>
       world.get(s"$filename") \/>(s"could not read filename: $filename")
 

@@ -7,6 +7,8 @@ import scalaz.NonEmptyList
 import scalaz.NonEmptyList.nels
 import scalaz.std.list._
 
+import DabblePathTypes.{DirPath, DabbleHomePath}
+
 trait DabbleProps {
 
  private [dabble] def genShortStrings: Gen[String] = for {
@@ -163,6 +165,16 @@ trait DabbleProps {
     mpv  <- genMacroParadise
   } yield DabbleHistoryLine(deps, res, mpv)
 
+  //History file lines should not have any extraneous spaces within resolvers
+  private[dabble] def genDabbleHistoryFileLine: Gen[DabbleHistoryLine] = for {
+    deps <- genDependencies.map(d => nels(d.head, d.tail:_*))
+    res  <- genResolversWithEmpty.map(_.map {
+              case Custom(name, url) => Custom(name.replace(" ", ""), url)
+              case other => other
+            })
+    mpv  <- genMacroParadise
+  } yield DabbleHistoryLine(deps, res, mpv)
+
   private[dabble] def genInvalidDabbleHistoryLineInputs: Gen[(Seq[String], Seq[String], Seq[String], Seq[String])] = {
     import Implicits._
     for {
@@ -272,6 +284,13 @@ scalacOptions ++= Seq(
 
   private[dabble] def genSbtTemplateContent: Gen[SbtTemplateContent] =
     Gen.oneOf(Gen.const(projSbtTemplate), genSbtTemplateString).map(SbtTemplateContent)
+
+  private[dabble] def genDirPath: Gen[DirPath] = for {
+    pathLength <- Gen.choose(3, 10)
+    path       <- Gen.listOfN(pathLength, genShortStrings)
+  } yield DirPath(path.mkString("/"))
+
+  private[dabble] def genDabbleHomePath: Gen[DabbleHomePath] = genDirPath.map(DabbleHomePath)
 
   private[dabble] def md5(values: Any*): String = {
     import java.security.MessageDigest

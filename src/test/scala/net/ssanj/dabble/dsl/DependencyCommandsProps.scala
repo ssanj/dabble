@@ -2,13 +2,17 @@ package net.ssanj.dabble
 package dsl
 
 import scala.io.Source
-import scala.collection.mutable.{Map => MMap}
+import scala.collection.mutable.{Map => MMap, LinkedHashSet, ArrayBuffer}
 
 import org.scalacheck.Properties
 import org.scalacheck.{Prop, Gen}
 
 import DependencyCommands._
 import DabblePathTypes._
+import DabblePrinter._
+import DabbleHistory.CommandlineParser
+import TerminalSupport.historyParser
+import DabbleProps._
 import ScalaCheckSupport._
 
 object DependencyCommandsProps extends Properties("DependencyCommands") {
@@ -73,6 +77,36 @@ object DependencyCommandsProps extends Properties("DependencyCommands") {
     }
 
     isRightProp && callProcProp
+  }
+
+  property("should launchSbt") = {
+      Prop.forAllNoShrink(genDabbleHomePath, genDabbleHistoryLine, many(2)(genDabbleHistoryFileLine)) {  (dabbleHomePath, selection, historyFile) =>
+        val historyLineParser: CommandlineParser = historyParser.parse(_, DabbleRunConfig())
+
+        val world = MMap[String, Seq[String]](
+            dabbleHomePath.history.path.file          -> historyFile.map(printHistoryLine),
+            dabbleHomePath.defaultBuildFile.path.file -> Seq("some.build.file"),
+            "os.name"                                 -> Seq("Linux 1.4.2"))
+
+        // println(s"$world")
+        val result = launchSbtConsole(dabbleHomePath, selection, historyLineParser, printHistoryLine).
+          foldMap(new SaveHistoryFileInterpreter(world))
+
+        val resultProp = contentProp("launchSbtConsole")(Seq(result), Seq(DabbleSuccess(Seq.empty)))
+
+        val procArgs   = world.get("sbt")
+        val launchProp = contentProp("launch args")(Seq(procArgs), Seq(Some(Seq("console-quick", dabbleHomePath.work.path.dir))))
+
+        val historyFileContent = world.get(dabbleHomePath.history.path.file)
+        val expectedHistoryFileContent = (LinkedHashSet() ++ (selection +: historyFile)).map(printHistoryLine).toSeq
+        val historyfileProp = contentProp("historyFile")(Seq(historyFileContent), Seq(Some(expectedHistoryFileContent)))
+
+        // println(s"after: $world")
+
+        resultProp &&
+        launchProp &&
+        historyfileProp
+      }
   }
 
   private def initOs(osOp: Option[OsName])(world: MMap[String, Seq[String]]): Unit = {

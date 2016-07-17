@@ -61,7 +61,6 @@ object DependencyCommands {
                       hLines: Seq[DabbleHistoryLine],
                       historyPrinter: DabbleHistoryLine => String):
     DabbleScript[ErrorOr[Unit]] = {
-
       val uniqueHLines = LinkedHashSet() ++ (selection +: hLines)
       writeFile(filename, uniqueHLines.map(historyPrinter).toSeq)
     }
@@ -94,7 +93,7 @@ object DependencyCommands {
 
       resultET.run map {
         case -\/(error) => dabbleFailure(error)
-        case \/-(hlaw) => dabbleSuccess(getWarnings(hlaw))
+        case \/-(hlaw)  => dabbleSuccess(getWarnings(hlaw))
       }
     }
 }

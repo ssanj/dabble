@@ -3,20 +3,20 @@ package net.ssanj.dabble
 
 trait DabblePathTypes {
 
-  sealed trait DabblePathTypes
-
   object DabblePathTypes {
     def dirPath(dir: String): DirPath = DirPath(dir)
 
     def filePath(dir: DirPath, file: String): FilePath = FilePath(dir, file)
   }
 
-  case class DirPath(dir: String) extends DabblePathTypes {
+  case class DirPath(dir: String) {
     def /(subdir: DirPath) = DirPath(s"${dir}/${subdir.dir}")
     def /(filePath: String)  = FilePath(this, filePath)
   }
 
-  case class FilePath(dir: DirPath, file: String) extends DabblePathTypes
+  case class FilePath(dir: DirPath, filename: String) {
+    val file: String = s"${dir.dir}/$filename"
+  }
 
   import DabblePathTypes._
 
