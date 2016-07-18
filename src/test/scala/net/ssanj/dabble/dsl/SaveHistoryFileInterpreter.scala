@@ -36,7 +36,13 @@ final class SaveHistoryFileInterpreter(world: MMap[String, Seq[String]]) extends
     case FileExists(filename) => world.get(filename) ? true | false
 
     case ReadFile(filename) =>
-      world.get(s"$filename") \/>(s"could not read filename: $filename")
+      val errorKey = s"ReadFile.${filename}.error"
+      if (world.get(errorKey).isDefined) {
+        world.get(errorKey).flatMap(_.headOption) <\/ (Seq.empty[String])
+      } else {
+        world.get(s"$filename") \/>(s"could not read filename: $filename")
+      }
+
 
     case SystemProp(key: String) =>
       world.get("os.name").flatMap(_.headOption) \/> (s"could not find os.name property")

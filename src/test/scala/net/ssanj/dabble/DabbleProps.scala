@@ -292,6 +292,18 @@ scalacOptions ++= Seq(
 
   private[dabble] def genDabbleHomePath: Gen[DabbleHomePath] = genDirPath.map(DabbleHomePath)
 
+  private[dabble] case class Word(word: String)
+
+  private[dabble] def genWord: Gen[Word] = for {
+    l       <- Gen.choose(5, 10)
+    letters <- Gen.listOfN(l, Gen.alphaLowerChar)
+  } yield Word(letters.mkString)
+
+  private[dabble] def genWords: Gen[Seq[Word]] = for {
+    l     <- Gen.choose(5, 10)
+    words <- Gen.listOfN(l, genWord)
+  } yield words
+
   private[dabble] def md5(values: Any*): String = {
     import java.security.MessageDigest
     MessageDigest.getInstance("MD5").
