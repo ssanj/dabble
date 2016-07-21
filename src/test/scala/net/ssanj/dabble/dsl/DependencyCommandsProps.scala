@@ -12,6 +12,7 @@ import scalaz.syntax.nel._
 import DependencyCommands._
 import DabblePathTypes._
 import DabblePrinter._
+import DefaultTemplate.inMemSbtTemplate
 import DabbleHistory.CommandlineParser
 import TerminalSupport.historyParser
 import DabbleProps._
@@ -134,6 +135,111 @@ object DependencyCommandsProps extends Properties("DependencyCommands") {
           contentProp("launchSbt")(
             Seq(result),
             Seq(DabbleFailure(s"Could not read history file: ${dabbleHomePath.history.path.file} due to: ${expectedError}".wrapNel)))
+      }
+  }
+
+  property("should launchSbt with in memory sbt template if a custom template doesn't exist") = {
+      Prop.forAllNoShrink(genDabbleHomePath,
+                          genDabbleHistoryLine,
+                          many(2)(genDabbleHistoryFileLine)) {
+        case (dabbleHomePath, selection, historyFile) =>
+          val historyLineParser: CommandlineParser = historyParser.parse(_, DabbleRunConfig())
+
+          val world = MMap[String, Seq[String]](
+              dabbleHomePath.history.path.file          -> historyFile.map(printHistoryLine),
+              "os.name"                                 -> Seq("Linux 1.4.2"))
+
+          val result = launchSbtConsole(dabbleHomePath, selection, historyLineParser, printHistoryLine).
+            foldMap(new SaveHistoryFileInterpreter(world))
+
+          val resultProp = contentProp("launchSbtConsole")(Seq(result), Seq(DabbleSuccess(Seq.empty)))
+
+          val Some(buildFileContent)   = world.get(dabbleHomePath.work.defaultBuildFile.path.file)
+          val expectedBuildFileContent = formatSbtTemplate(inMemSbtTemplate(newlines(2)), selection)
+          val buildFileContentsProp    = contentProp("build.sbt")(buildFileContent, Seq(expectedBuildFileContent))
+
+          val procArgs   = world.get("sbt")
+          val launchProp = contentProp("launch args")(Seq(procArgs), Seq(Some(Seq("console-quick", dabbleHomePath.work.path.dir))))
+
+          val historyFileContent         = world.get(dabbleHomePath.history.path.file)
+          val expectedHistoryFileContent = (LinkedHashSet() ++ (selection +: historyFile)).map(printHistoryLine).toSeq
+          val historyfileProp            = contentProp("historyFile")(
+            Seq(historyFileContent), Seq(Some(expectedHistoryFileContent)))
+
+          resultProp &&
+          launchProp &&
+          buildFileContentsProp &&
+          historyfileProp
+      }
+  }
+
+
+ property("should fail to launchSbt if the build.sbt file can't be written") = {
+      Prop.forAllNoShrink(genDabbleHomePath,
+                          genDabbleHistoryLine,
+                          genSbtTemplateContent,
+                          many(2)(genDabbleHistoryFileLine),
+                          genWords) {
+        case (dabbleHomePath, selection, sbtTemplate, historyFile, errorMessages) =>
+          val historyLineParser: CommandlineParser = historyParser.parse(_, DabbleRunConfig())
+          val writeError = errorMessages.map(_.word).mkString(" ")
+
+          val world = MMap[String, Seq[String]](
+              dabbleHomePath.history.path.file                                     -> historyFile.map(printHistoryLine),
+              dabbleHomePath.defaultBuildFile.path.file                            -> Seq(sbtTemplate.content),
+              "os.name"                                                            -> Seq("Linux 1.4.2"),
+              s"WriteFile.${dabbleHomePath.work.defaultBuildFile.path.file}.error" -> Seq(writeError))
+
+          val result = launchSbtConsole(dabbleHomePath, selection, historyLineParser, printHistoryLine).
+            foldMap(new SaveHistoryFileInterpreter(world))
+
+          contentProp("launchSbtConsole")(Seq(result), Seq(DabbleFailure(writeError.wrapNel)))
+      }
+  }
+
+ property("should fail to launchSbt there is an error calling sbt") = {
+      Prop.forAllNoShrink(genDabbleHomePath,
+                          genDabbleHistoryLine,
+                          genSbtTemplateContent,
+                          many(2)(genDabbleHistoryFileLine),
+                          genWords) {
+        case (dabbleHomePath, selection, sbtTemplate, historyFile, errorMessages) =>
+          val historyLineParser: CommandlineParser = historyParser.parse(_, DabbleRunConfig())
+          val writeError = errorMessages.map(_.word).mkString(" ")
+
+          val world = MMap[String, Seq[String]](
+              dabbleHomePath.history.path.file                                       -> historyFile.map(printHistoryLine),
+              dabbleHomePath.defaultBuildFile.path.file                              -> Seq(sbtTemplate.content),
+              "os.name"                                                              -> Seq("Linux 1.4.2"),
+              s"CallProcess.sbt.console-quick.${dabbleHomePath.work.path.dir}.error" -> Seq(writeError))
+
+          val result = launchSbtConsole(dabbleHomePath, selection, historyLineParser, printHistoryLine).
+            foldMap(new SaveHistoryFileInterpreter(world))
+
+          contentProp("launchSbtConsole")(Seq(result), Seq(DabbleFailure(writeError.wrapNel)))
+      }
+  }
+
+ property("should fail to launchSbt if the history file can't be saved") = {
+      Prop.forAllNoShrink(genDabbleHomePath,
+                          genDabbleHistoryLine,
+                          genSbtTemplateContent,
+                          many(2)(genDabbleHistoryFileLine),
+                          genWords) {
+        case (dabbleHomePath, selection, sbtTemplate, historyFile, errorMessages) =>
+          val historyLineParser: CommandlineParser = historyParser.parse(_, DabbleRunConfig())
+          val writeError = errorMessages.map(_.word).mkString(" ")
+
+          val world = MMap[String, Seq[String]](
+              dabbleHomePath.history.path.file                       -> historyFile.map(printHistoryLine),
+              dabbleHomePath.defaultBuildFile.path.file              -> Seq(sbtTemplate.content),
+              "os.name"                                              -> Seq("Linux 1.4.2"),
+              s"WriteFile.${dabbleHomePath.history.path.file}.error" -> Seq(writeError))
+
+          val result = launchSbtConsole(dabbleHomePath, selection, historyLineParser, printHistoryLine).
+            foldMap(new SaveHistoryFileInterpreter(world))
+
+          contentProp("launchSbtConsole")(Seq(result), Seq(DabbleFailure(writeError.wrapNel)))
       }
   }
 

@@ -26,8 +26,9 @@ final class SaveHistoryFileInterpreter(world: MMap[String, Seq[String]]) extends
     }
 
     case WriteFile(filename, lines) =>
-      if (filename.endsWith("error")) {
-        s"Could not write to: $filename".left[Unit]
+      val errorKey = s"WriteFile.${filename}.error"
+      if (world.get(errorKey).isDefined) {
+        world.get(errorKey).flatMap(_.headOption) <\/ (Seq.empty[String])
       }else {
         world += (filename -> lines)
         ().right
@@ -48,8 +49,13 @@ final class SaveHistoryFileInterpreter(world: MMap[String, Seq[String]]) extends
       world.get("os.name").flatMap(_.headOption) \/> (s"could not find os.name property")
 
     case CallProcess(procName, arguments, workingDir) =>
-      world += (procName -> Seq(arguments, workingDir))
-      ().right
+      val errorKey = s"CallProcess.${procName}.${arguments}.${workingDir}.error"
+      if (world.get(errorKey).isDefined) {
+        world.get(errorKey).flatMap(_.headOption) <\/ (Seq.empty[String])
+      } else {
+        world += (procName -> Seq(arguments, workingDir))
+        ().right
+      }
 
     case x => throw new IllegalArgumentException(s"unhandled command: $x")
   }

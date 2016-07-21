@@ -7,7 +7,7 @@ import scalaz.NonEmptyList
 import scalaz.NonEmptyList.nels
 import scalaz.std.list._
 
-import DabblePathTypes.{DirPath, DabbleHomePath}
+import DabblePathTypes.{DirPath, FilePath, DabbleHomePath}
 
 trait DabbleProps {
 
@@ -289,6 +289,12 @@ scalacOptions ++= Seq(
     pathLength <- Gen.choose(3, 10)
     path       <- Gen.listOfN(pathLength, genShortStrings)
   } yield DirPath(path.mkString("/"))
+
+  private[dabble] def genFilePath: Gen[FilePath] = for {
+    pathLength <- Gen.choose(3, 10)
+    path       <- Gen.listOfN(pathLength, genShortStrings)
+    filename   <- genShortStrings
+  } yield FilePath(DirPath(path.mkString("/")), filename)
 
   private[dabble] def genDabbleHomePath: Gen[DabbleHomePath] = genDirPath.map(DabbleHomePath)
 

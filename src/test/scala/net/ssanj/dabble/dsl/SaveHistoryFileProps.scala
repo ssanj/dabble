@@ -65,20 +65,21 @@ object SaveHistoryFileProps extends Properties("Saving a history file") {
 
 
   property("should return an error if the history file can't be written to") = {
-      Prop.forAll(genSimpleDabbleHistoryLine) {  selection =>
+      Prop.forAll(genSimpleDabbleHistoryLine, genFilePath, genWords) {  (selection, filePath, errorMessages) =>
 
-        val world = MMap[String, Seq[String]]()
-        val unwritableFile = s"${filename}.error"
+        val writeError = errorMessages.map(_.word).mkString(" ")
+        val historyFile = filePath.file
+        val world = MMap(s"WriteFile.${historyFile}.error" -> Seq(writeError))
 
         val result =
-          saveHistoryFile(unwritableFile, selection, Seq.empty[DabbleHistoryLine], hPrinter).
+          saveHistoryFile(historyFile, selection, Seq.empty[DabbleHistoryLine], hPrinter).
             foldMap(new SaveHistoryFileInterpreter(world))
 
         val isLeftProp = booleanProp("isLeft")(result.isLeft, true)
 
         val content = result.swap.toOption.get
 
-        val messageProp = contentProp("message")(Seq(content), Seq(s"Could not write to: $unwritableFile"))
+        val messageProp = contentProp("message")(Seq(content), Seq(writeError))
 
         isLeftProp && messageProp
       }
