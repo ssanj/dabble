@@ -92,19 +92,19 @@ object HistoryCommands {
   def findBySearchTerm(hLines: Seq[DabbleHistoryLine], term: String): Seq[DabbleHistoryLine] = {
     hLines.filter {
         case DabbleHistoryLine(deps, _, _) =>
-          !deps.list.filter {
+          deps.list.toList.exists {
             case ScalaVersionSupplied(org, name, _, _) =>
               org.contains(term) || name.contains(term)
             case ScalaVersionDerived(org, name, _, _) =>
               org.contains(term) || name.contains(term)
-          }.isEmpty
+          }
     }
   }
 
   def promptUserToShowFullHistoryOrQuit(fullHistoryPrompt: String,
                                         hMenu: HistoryMenu,
                                         fullHistory: Seq[DabbleHistoryLine]): DabbleScript[HistoryOption] = for {
-    input <- readInput(s"Select 'f' for full history or 'q' to quit.")
+    input <- readInput("Select 'f' for full history or 'q' to quit.")
     ho <- input match {
       case "f" => showHistoryMenuAndPromptUser(fullHistoryPrompt, hMenu, fullHistory)
       case "q" => liftDS(QuitHistory)

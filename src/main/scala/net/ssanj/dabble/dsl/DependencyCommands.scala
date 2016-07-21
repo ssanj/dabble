@@ -19,6 +19,7 @@ import ResolverParser._
 object DependencyCommands {
 
   //TODO: Delete once we have the EitherT sorted out
+  @SuppressWarnings(Array("UnusedMethodParameter"))
   def launchDabble(dabbleHomePath: DabbleHomePath, line: DabbleHistoryLine): DabbleScript[ErrorOr[Unit]] = ???
   //TODO: split this method up
 

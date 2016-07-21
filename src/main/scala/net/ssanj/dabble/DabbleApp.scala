@@ -45,12 +45,12 @@ object DabbleApp {
           searchTerm match {
             case Some(term) => uniques.filter {
               case DabbleHistoryLine(deps, _, _) =>
-                !deps.list.filter {
+                deps.list.toList.exists {
                   case ScalaVersionSupplied(org, name, _, _) =>
                     org.contains(term) || name.contains(term)
                   case ScalaVersionDerived(org, name, _, _) =>
                     org.contains(term) || name.contains(term)
-                }.isEmpty
+                }
             }
 
             case None => uniques

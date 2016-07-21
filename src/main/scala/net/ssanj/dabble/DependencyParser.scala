@@ -44,7 +44,7 @@ trait DependencyParser  {
    * @return A -\/ with an error  or a \/- with a Seq[Dependency].
    */
   def parseDependencies(inputs: Seq[String]): String \/ Seq[Dependency] = {
-    if (inputs.isEmpty) s"unable to derive dependencies from empty input".left
+    if (inputs.isEmpty) "unable to derive dependencies from empty input".left
     else parse(inputs, Seq.empty[Dependency])
   }
 
@@ -75,7 +75,7 @@ trait DependencyParser  {
     case Seq("+", org, "%", name, "%", version, t@_*) =>
       parse(t, dependencies :+ ScalaVersionSupplied(org, name, version))
 
-    case Seq("+") if (!dependencies.isEmpty) => dependencies.right
+    case Seq("+") if (dependencies.nonEmpty) => dependencies.right
 
     case xs => s"unable to derive dependencies from: ${xs.mkString(",")}".left
   }

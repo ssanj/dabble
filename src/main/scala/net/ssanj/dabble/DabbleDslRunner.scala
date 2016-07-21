@@ -22,7 +22,7 @@ import dsl.HistoryCommands._
 
 object DabbleDslRunner extends App {
 
-  private def loadDependencies(drc: DabbleRunConfig, dabbleHome: DabbleHome): Unit = {
+  private def loadDependencies(drc: DabbleRunConfig): Unit = {
       val deps = drc.dependencies
       val res  = drc.resolvers
       val mp   = drc.macroParadiseVersion
@@ -54,8 +54,7 @@ object DabbleDslRunner extends App {
       }
   }
 
-  private def loadHistory(searchTerm: Option[String],
-                          dabbleHome: DabbleHome): Unit = {
+  private def loadHistory(searchTerm: Option[String]): Unit = {
     val argParser: CommandlineParser = historyParser.parse(_, DabbleRunConfig())
     val historyPrinter = DabblePrinter.printHistoryLine(_)
     val hMenu: HistoryMenu = historyLines => {
@@ -83,7 +82,7 @@ object DabbleDslRunner extends App {
     result.
       fold(x => println(s"Dabble failed with: ${x.getMessage}"), {
         case DabbleSuccess(Seq()) =>
-          println(s"Dabble completed successfully.")
+          println("Dabble completed successfully.")
         case DabbleSuccess(warnings) =>
           println(s"Dabble completed successfully, but had the following warnings:${newline}")
           warnings.foreach { w => println(w) }
@@ -98,10 +97,10 @@ object DabbleDslRunner extends App {
 
   parser.parse(args, DabbleRunConfig()) match {
     case Some(drc@DabbleRunConfig(deps, res, mp, None)) =>
-      loadDependencies(drc, dabbleHome)
+      loadDependencies(drc)
 
     case Some(DabbleRunConfig(_, _, _, Some(HistoryCommand(searchTerm)))) =>
-      loadHistory(searchTerm, dabbleHome)
+      loadHistory(searchTerm)
 
     case None => //failed to parse options. Parser will indicate error.
   }
