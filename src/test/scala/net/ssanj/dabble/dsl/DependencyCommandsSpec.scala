@@ -38,22 +38,6 @@ final class DependencyCommandSpec extends FlatSpec with Matchers with BeforeAndA
     logs.head should be (expectedLog)
   }
 
-  //TODO" These two can be written as props.
-  "readSbtTemplateOrDefault" should "read sbt template" in {
-    val sbtTemplate = "/some/path/build.sbt"
-    val templateContent = Seq("line1", "line2", "line3")
-    world += (sbtTemplate -> templateContent)
-
-
-    val content = readSbtTemplateOrDefault(sbtTemplate).foldMap(interpreter)
-
-    val expectedContent = templateContent.mkString(newline)
-    content should be (expectedContent)
-
-    val expectedLog = "Using default sbt template at: /some/path/build.sbt"
-    world.get("log").get.head should be (expectedLog)
-  }
-
   it should "fallback to in memory template" in {
     val sbtTemplate = "/some/path/build.sbt"
 

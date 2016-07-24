@@ -243,6 +243,24 @@ object DependencyCommandsProps extends Properties("DependencyCommands") {
       }
   }
 
+  property("should read the default sbt template when valid") = {
+    Prop.forAllNoShrink(genDabbleHomePath, genSbtTemplateContent) { (dabbleHomePath, sbtTemplateContent) =>
+      val world = MMap[String, Seq[String]](
+        dabbleHomePath.defaultBuildFile.path.file -> Seq(sbtTemplateContent.content)
+      )
+
+      val content = readSbtTemplateOrDefault(dabbleHomePath.defaultBuildFile.path.file).
+                      foldMap(new SaveHistoryFileInterpreter(world))
+
+      val sbtContentProp  = contentProp("sbtTemplate")(Seq(content), Seq(sbtTemplateContent.content))
+
+      val expectedLog = s"Using default sbt template at: ${dabbleHomePath.defaultBuildFile.path.file}"
+      val logProp     = contentProp("log")(Seq(world.get("log").get.head), Seq(expectedLog))
+
+      sbtContentProp && logProp
+    }
+  }
+
   private def initOs(osOp: Option[OsName])(world: MMap[String, Seq[String]]): Unit = {
     osOp.foreach { os =>
       world += ("os.name" -> Seq(os.name))

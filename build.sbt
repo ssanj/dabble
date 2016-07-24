@@ -29,3 +29,5 @@ scalacOptions ++= Seq(
                       "-Ypatmat-exhaust-depth",
                       "40"
                      )
+
+addCommandAlias("precheckin", ";clean;scapegoat;test")
