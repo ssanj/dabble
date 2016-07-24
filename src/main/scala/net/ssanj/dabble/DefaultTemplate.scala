@@ -20,7 +20,7 @@ trait DefaultTemplate {
 
   val templateLineSeparator = s"${newline}${newline}"
 
-  def inMemSbtTemplate(separator: String) =
+  def inMemSbtTemplate(separator: String): String =
     s"${templateHeader}${separator}"       +
     s"${templateName}${separator}"         +
     s"${templateOrganisation}${separator}" +

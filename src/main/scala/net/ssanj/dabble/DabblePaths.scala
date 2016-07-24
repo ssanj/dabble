@@ -10,9 +10,9 @@ trait DabblePaths {
   case class DabbleTemplates(path: Path)
 
   case class DabbleHome(path: Path) {
-    def work      = DabbleWork(path/'work)
-    def templates = DabbleTemplates(path/'templates)
-    def history = path/"dabble.history"
+    def work: DabbleWork      = DabbleWork(path/'work)
+    def templates: DabbleTemplates = DabbleTemplates(path/'templates)
+    def history: Path = path/"dabble.history"
   }
 
   val dabbleHome = DabbleHome(userHomePath/".dabble")

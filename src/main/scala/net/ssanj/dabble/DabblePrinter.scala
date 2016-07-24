@@ -76,7 +76,7 @@ trait DabblePrinter {
    */
   def printLibraryDependenciesText(deps: Seq[Dependency]): String =  {
     val depStrings = deps.map(Show[Dependency].shows).map(_.replace("\"", ""))
-    depStrings.zipWithIndex.map{ case (d, i) => s"[${i+1}] $d" }.mkString(newline)
+    depStrings.zipWithIndex.map{ case (d, i) => s"[${i + 1}] $d" }.mkString(newline)
   }
 
 /**
@@ -99,7 +99,7 @@ trait DabblePrinter {
    */
   def printResolversAsText(resolvers: Seq[Resolver]): String = {
     val resolverStrings = resolvers.map(r => Show[ResolverString].shows(ResolverString(r)))
-    resolverStrings.zipWithIndex.map { case (r, i) => s"[${i+1}] $r" }.mkString(newline)
+    resolverStrings.zipWithIndex.map { case (r, i) => s"[${i + 1}] $r" }.mkString(newline)
   }
 
   /**

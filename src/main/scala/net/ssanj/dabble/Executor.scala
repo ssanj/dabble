@@ -143,7 +143,9 @@ trait Executor {
     s"""initialCommands := "${replEscaped(replString)}""""
   }
 
-  def getSBTExec = if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "sbt.bat" else "sbt"
+  def getSBTExec: String =
+    if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "sbt.bat"
+    else "sbt"
 }
 
 object Executor extends Executor

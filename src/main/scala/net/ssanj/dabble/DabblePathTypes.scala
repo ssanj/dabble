@@ -10,8 +10,8 @@ trait DabblePathTypes {
   }
 
   case class DirPath(dir: String) {
-    def /(subdir: DirPath) = DirPath(s"${dir}/${subdir.dir}")
-    def /(filePath: String)  = FilePath(this, filePath)
+    def /(subdir: DirPath): DirPath = DirPath(s"${dir}/${subdir.dir}")
+    def /(filePath: String): FilePath  = FilePath(this, filePath)
   }
 
   case class FilePath(dir: DirPath, filename: String) {

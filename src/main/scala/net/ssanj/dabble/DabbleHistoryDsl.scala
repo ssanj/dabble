@@ -60,11 +60,15 @@ object DabbleDslDef {
 
   def dsBind[A, B](ds: DabbleScript[A], f: A => DabbleScript[B]): DabbleScript[B] = ds.flatMap(f)
 
-  def erBind(er1: DabbleScript[ExecutionResult2], f: ExecutionResult2 => DabbleScript[ExecutionResult2]) =
-    dsBind[ExecutionResult2, ExecutionResult2](er1, {
-        case er@ExecutionResult2(_, SuccessfulAction) => f(er)
-        case er => er1
-      })
+  def erBind(er1: DabbleScript[ExecutionResult2],
+             f: ExecutionResult2 => DabbleScript[ExecutionResult2]):
+    DabbleScript[ExecutionResult2] = {
+
+      dsBind[ExecutionResult2, ExecutionResult2](er1, {
+          case er@ExecutionResult2(_, SuccessfulAction) => f(er)
+          case er => er1
+        })
+    }
 
  /** Combines a [[DabbleScript]] that contains an [[ExecutionResult2]] with another that contains an
    * [[ErrorOr[A]]] to finally return an [[ExecutionResult2]].

@@ -61,7 +61,7 @@ object DabbleDslRunner extends App {
       "Dabble History" +
       newline +
       historyLines.zipWithIndex.map {
-        case (line, i) => s"[${i+1}] ${historyPrinter(line)}"
+        case (line, i) => s"[${i + 1}] ${historyPrinter(line)}"
       }.mkString(newline)
     }
 

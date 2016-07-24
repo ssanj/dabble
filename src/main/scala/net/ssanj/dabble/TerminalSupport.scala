@@ -6,7 +6,7 @@ final case class DabbleRunConfig(dependencies: Seq[String] = Seq.empty,
                                  resolvers: Seq[String] = Seq.empty,
                                  macroParadiseVersion: Option[String] = None,
                                  historyCommand: Option[HistoryCommand] = None) {
-  def %(dep: String) = this.copy(dependencies = dependencies :+ dep)
+  def %(dep: String): DabbleRunConfig = this.copy(dependencies = dependencies :+ dep)
 }
 
 trait TerminalSupport {
@@ -97,9 +97,9 @@ trait TerminalSupport {
     showUsageOnError
     note(s"${newline}Please see https://github.com/ssanj/dabble for more examples.")
     checkConfig{ c =>
-      if (c.dependencies.length < 5 && c.historyCommand.isEmpty)
+      if (c.dependencies.length < 5 && c.historyCommand.isEmpty) {
         failure("Invalid format for dependencies. Please see accepted formats below.")
-      else success
+      } else success
     }
     historyCommand(this)
   }

@@ -30,4 +30,4 @@ scalacOptions ++= Seq(
                       "40"
                      )
 
-addCommandAlias("precheckin", ";clean;scapegoat;test")
+addCommandAlias("precheckin", ";clean;scalastyle;scapegoat;test")

@@ -59,16 +59,16 @@ package object dabble {
 //https://github.com/sbt/librarymanagement/blob/1.0/librarymanagement/src/main/scala/sbt/librarymanagement/Resolver.scala
 // JavaNet1Repository This is the Maven 1 repository at http://download.java.net/maven/1/
 
-  val newline           = System.getProperty("line.separator")
-  def newlines(n: Int)  = List.fill(n)(newline).mkString
-  val userHome          = System.getProperty("user.home")
-  val tab               = "\t"
-  val escapedTab        = "\\\\t"
-  val tabAsSpaces       = "  "
-  val newlineAndTab     = s"${newline}${tab}"
-  val escapedNewline    = newline.replace("\n", "\\\\n").replace("\r", "\\\\r")
-  val defaultBuildFile  = "build.sbt"
-  lazy val title        = s"${DabbleInfo.name} version: ${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}"
+  val newline                  = System.getProperty("line.separator")
+  def newlines(n: Int): String = List.fill(n)(newline).mkString
+  val userHome                 = System.getProperty("user.home")
+  val tab                      = "\t"
+  val escapedTab               = "\\\\t"
+  val tabAsSpaces              = "  "
+  val newlineAndTab            = s"${newline}${tab}"
+  val escapedNewline           = newline.replace("\n", "\\\\n").replace("\r", "\\\\r")
+  val defaultBuildFile         = "build.sbt"
+  lazy val title               = s"${DabbleInfo.name} version: ${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}"
 
   def log(messages: String*): Unit = println(s"${DabbleInfo.name}: ${messages.mkString(newline)}")
 }

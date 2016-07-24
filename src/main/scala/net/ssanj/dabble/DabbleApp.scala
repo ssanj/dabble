@@ -64,7 +64,7 @@ object DabbleApp {
           println
 
           historyLines.zipWithIndex.foreach {
-            case (line, i) => println(s"[${i+1}] ${printHistoryLine(line)}")
+            case (line, i) => println(s"[${i + 1}] ${printHistoryLine(line)}")
           }
 
           readInput(historyLines.length) match {
@@ -90,9 +90,10 @@ object DabbleApp {
     println
     println(s"Please select a number between 1 and ${lines} or type q to exit")
     val choice = readLine
-    if (Try(choice.toInt).map(c => c <= lines).toOption.getOrElse(false))
+    if (Try(choice.toInt).map(c => c <= lines).toOption.getOrElse(false)) {
       Math.max(0, choice.toInt - 1).left[String]
-    else if (choice == "q") "q".right[Int]
-    else readInput(lines)
+    } else if (choice == "q") {
+      "q".right[Int]
+    } else readInput(lines)
   }
 }
