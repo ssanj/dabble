@@ -316,7 +316,8 @@ scalacOptions ++= Seq(
   } yield words
 
   private[dabble] case class SearchTerm(term: String)
-  private[dabble] case class HistorySearchCombo(dhls: Seq[DabbleHistoryLine], term: SearchTerm, matched: DabbleHistoryLine)
+
+  private[dabble] case class HistorySearchCombo(dhls: Seq[DabbleHistoryLine], term: SearchTerm, matched: Seq[DabbleHistoryLine])
 
   private[dabble] def genNameFromTerm(searchTerm: SearchTerm): Gen[String] = {
     val term = searchTerm.term
@@ -331,18 +332,10 @@ scalacOptions ++= Seq(
     other      <- genShortStrings
     version    <- genVersion
     matchedOrg <- Gen.oneOf(true, false)
-    supplied   <- Gen.oneOf(true, false)
     org        <- Gen.const(if (matchedOrg) matched else other)
     name       <- Gen.const(if (!matchedOrg) matched else other)
-  } yield {
-    if (supplied) ScalaVersionSupplied(org, name, version)
-    else ScalaVersionDerived(org, name, version)
-  }
-
-  // private[dabble] def genDependenciesFromTerm(term: SearchTerm): Gen[Seq[Dependency]] = for {
-  //   l <- Gen.choose(2, 5)
-  //   deps <- Gen.listOfN(genDependencyFromTerm(term))
-  // } yield deps
+    dep        <- Gen.oneOf(ScalaVersionSupplied(org, name, version), ScalaVersionDerived(org, name, version))
+  } yield dep
 
   private[dabble] def genDabbleHistoryLineFromTerm(term: SearchTerm): Gen[DabbleHistoryLine] = for {
     dep  <- genDependencyFromTerm(term)
@@ -350,17 +343,14 @@ scalacOptions ++= Seq(
     shuffled = scala.util.Random.shuffle(dep +: deps)
   } yield DabbleHistoryLine(dependencies = nels(shuffled.head, shuffled.tail:_*))
 
-  // private[dabble] def genDabbleHistoryLinesFromTerm(term: SearchTerm): Gen[Seq[DabbleHistoryLine]] = for {
-  //   l    <- Gen.choose(2, 5)
-  //   dhls <- Gen.listOfN(l, genDabbleHistoryLineFromTerm(term))
-  // } yield dhls
-
   private[dabble] def genMatchingHistorySearchCombo: Gen[HistorySearchCombo] = for {
-      term  <- genShortStrings.map(SearchTerm)
-      dhl   <- genDabbleHistoryLineFromTerm(term)
-      l <- Gen.choose(2, 3)
+      term      <- genShortStrings.map(SearchTerm)
+      n         <- Gen.choose(1, 3)
+      pMatched  <- Gen.listOfN(n, genDabbleHistoryLineFromTerm(term))
+      matched   <- Gen.someOf(pMatched)
+      l         <- Gen.choose(2, 3)
       unmatched <- Gen.listOfN(l, genSimpleDabbleHistoryLine)
-  } yield HistorySearchCombo(scala.util.Random.shuffle(dhl +: unmatched), term, dhl)
+  } yield HistorySearchCombo(scala.util.Random.shuffle(matched ++ unmatched), term, matched)
 
   private[dabble] def md5(values: Any*): String = {
     import java.security.MessageDigest

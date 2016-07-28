@@ -19,6 +19,7 @@ object HistoryCommandsProps extends Properties("HistoryCommands") {
 
         val result = findBySearchTerm(dhls, term)
 
-        Prop.collect(s"$term -> " + printHistoryLines(dhls)) { contentProp("searchTerm")(result, Seq(matched)) }
+        Prop.collect(s"$term -> deps:${dhls.size} matches:${matched.size}") { contentProp("searchTerm")(
+          result.sortBy(_.toString), matched.sortBy(_.toString)) }
   }
 }
