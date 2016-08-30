@@ -4,6 +4,7 @@ package dsl
 import scala.util.Try
 
 import scalaz._
+import scalaz.NonEmptyList.nels
 import scalaz.syntax.either._
 import scalaz.syntax.bind._
 
@@ -42,7 +43,7 @@ object HistoryCommands {
 
   //TODO: hLines should be a NonEmptyList, as we only call this method when we have results.
   def getUserChoice(prompt: String,
-                    hLines: Seq[DabbleHistoryLine]): DabbleScript[HistoryOption] = {
+                    hLines: NonEmptyList[DabbleHistoryLine]): DabbleScript[HistoryOption] = {
 
     readInput(prompt).
       flatMap {
@@ -50,11 +51,11 @@ object HistoryCommands {
             case in =>
               import OneBased._
 
-              val maxLines = fromZeroBased(hLines.length)
+              val maxLines = fromZeroBased(hLines.list.length)
 
               Try(in.toInt).
                 filter(maxLines.includes).
-                map(line => liftDS[HistoryOption](HistorySelection(hLines(fromOneBased(line).toZeroBased)))).
+                map(line => liftDS[HistoryOption](HistorySelection(hLines.list.toList(fromOneBased(line).toZeroBased)))).
                 getOrElse(getUserChoice(prompt, hLines))
       }
   }
@@ -73,13 +74,14 @@ object HistoryCommands {
      for {
        ho <- if (hLines.isEmpty) noHistory
              else {
+               val nelHlines: NonEmptyList[DabbleHistoryLine] = nels(hLines.head, hLines.tail:_*)
                searchTerm match {
                  case Some(term) =>
-                   val matchedLines = findBySearchTerm(hLines, term)
-                   if (matchedLines.isEmpty) showAlternateOptions(prompt, hMenu, hLines)(term)
-                   else showHistoryMenuAndPromptUser(prompt, hMenu, matchedLines)
+                   val matchedLines = findBySearchTerm(nelHlines, term)
+                   if (matchedLines.isEmpty) showAlternateOptions(prompt, hMenu, nelHlines)(term)
+                   else showHistoryMenuAndPromptUser(prompt, hMenu, nels(matchedLines.head, matchedLines.tail:_*))
 
-                 case None => showHistoryMenuAndPromptUser(prompt, hMenu, hLines)
+                 case None => showHistoryMenuAndPromptUser(prompt, hMenu, nelHlines)
                }
              }
      } yield ho
@@ -87,12 +89,12 @@ object HistoryCommands {
 
   def showAlternateOptions(prompt: String,
                            hMenu: HistoryMenu,
-                           hLines: Seq[DabbleHistoryLine])(term: String): DabbleScript[HistoryOption] =
+                           hLines: NonEmptyList[DabbleHistoryLine])(term: String): DabbleScript[HistoryOption] =
     log(s"Could not find matches for: $term.") >>
       promptUserToShowFullHistoryOrQuit(prompt, hMenu, hLines)
 
-  def findBySearchTerm(hLines: Seq[DabbleHistoryLine], term: String): Seq[DabbleHistoryLine] = {
-    hLines.filter {
+  def findBySearchTerm(hLines: NonEmptyList[DabbleHistoryLine], term: String): Seq[DabbleHistoryLine] = {
+    hLines.list.filter {
         case DabbleHistoryLine(deps, _, _) =>
           deps.list.toList.exists {
             case ScalaVersionSupplied(org, name, _, _) =>
@@ -100,12 +102,12 @@ object HistoryCommands {
             case ScalaVersionDerived(org, name, _, _) =>
               org.contains(term) || name.contains(term)
           }
-    }
+    }.toList
   }
 
   def promptUserToShowFullHistoryOrQuit(fullHistoryPrompt: String,
                                         hMenu: HistoryMenu,
-                                        fullHistory: Seq[DabbleHistoryLine]): DabbleScript[HistoryOption] = for {
+                                        fullHistory: NonEmptyList[DabbleHistoryLine]): DabbleScript[HistoryOption] = for {
     input <- readInput("Select 'f' for full history or 'q' to quit.")
     ho <- input match {
       case "f" => showHistoryMenuAndPromptUser(fullHistoryPrompt, hMenu, fullHistory)
@@ -116,8 +118,8 @@ object HistoryCommands {
 
   def showHistoryMenuAndPromptUser(prompt: String,
                                    hMenu: HistoryMenu,
-                                   hLines: Seq[DabbleHistoryLine]): DabbleScript[HistoryOption] = {
-    log(hMenu(hLines)) >> getUserChoice(prompt, hLines)
+                                   hLines: NonEmptyList[DabbleHistoryLine]): DabbleScript[HistoryOption] = {
+    log(hMenu(hLines.list.toList)) >> getUserChoice(prompt, hLines)
   }
 
   // //4. Program
