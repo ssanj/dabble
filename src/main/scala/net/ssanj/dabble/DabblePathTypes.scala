@@ -24,7 +24,6 @@ trait DabblePathTypes {
     val defaultBuildFile: DabbleDefaultWorkBuildFile = DabbleDefaultWorkBuildFile(path/"build.sbt")
   }
 
-
   case class DabbleTemplatesPath(path: DirPath)
   case class DabbleHistoryFilePath(path: FilePath)
   case class DabbleDefaultBuildFile(path: FilePath)

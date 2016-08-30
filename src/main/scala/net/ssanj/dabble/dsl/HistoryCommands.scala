@@ -39,6 +39,8 @@ object HistoryCommands {
 
   import HistoryDsl._
 //3. Compose functions
+
+  //TODO: hLines should be a NonEmptyList, as we only call this method when we have results.
   def getUserChoice(prompt: String,
                     hLines: Seq[DabbleHistoryLine]): DabbleScript[HistoryOption] = {
 

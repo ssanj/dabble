@@ -44,8 +44,14 @@ final class SaveHistoryFileInterpreter(world: MMap[String, Seq[String]]) extends
         world.get(s"$filename") \/>(s"could not read filename: $filename")
       }
 
+    case ReadInput(prompt) => {
+      val inputs = world.get(s"ReadInput.${prompt}").getOrElse(Seq.empty)
+      val result = inputs.headOption.getOrElse("_no_input")
+      world += (s"ReadInput.${prompt}" -> inputs.tail)
+      result
+    }
 
-    case SystemProp(key: String) =>
+    case SystemProp(key) =>
       world.get("os.name").flatMap(_.headOption) \/> (s"could not find os.name property")
 
     case CallProcess(procName, arguments, workingDir) =>

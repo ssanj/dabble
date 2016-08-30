@@ -23,6 +23,9 @@ object DependencyCommands {
   def launchDabble(dabbleHomePath: DabbleHomePath, line: DabbleHistoryLine): DabbleScript[ErrorOr[Unit]] = ???
   //TODO: split this method up
 
+  //TODO: This should be done in the interpreter.
+  //we probably don't need getSBTExec. CallProcess should be given the correct
+  //executable.
   def getSBTExec: DabbleScript[String] = for {
     sbtE <- systemProp("os.name")
     sbtExec = sbtE match {
