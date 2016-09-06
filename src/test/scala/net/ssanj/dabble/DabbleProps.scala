@@ -357,6 +357,12 @@ scalacOptions ++= Seq(
     MessageDigest.getInstance("MD5").
       digest(values.map(_.toString).mkString.getBytes).map("%02x".format(_)).mkString
   }
+
+  private[dabble] def genStringList: Gen[Seq[String]] = for {
+    length  <- Gen.choose(2, 5)
+    values  <- Gen.listOfN(length, Gen.alphaStr)
+  } yield values
+
 }
 
 object DabbleProps extends DabbleProps

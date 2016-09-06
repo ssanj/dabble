@@ -10,8 +10,10 @@ libraryDependencies ++= Seq(
   "org.scalaz"       %% "scalaz-core"  % "7.2.2",
   "com.lihaoyi"      %% "ammonite-ops" % "0.5.7",
   "com.github.scopt" %% "scopt"        % "3.4.0",
+ // "org.scalacheck"   %% "scalacheck"   % "1.13.3-SNAPSHOT" % "test"
   "org.scalatest"    %% "scalatest"    % "2.2.4"  % "test",
   "org.scalacheck"   %% "scalacheck"   % "1.12.5" % "test"
+
 )
 
 scalacOptions ++= Seq(

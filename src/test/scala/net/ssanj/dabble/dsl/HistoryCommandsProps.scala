@@ -70,4 +70,47 @@ object HistoryCommandsProps extends Properties("HistoryCommands") {
         }
       }
   }
+
+  property("should not chooseHistory when there are no valid history lines") = {
+
+      Prop.forAll(Gen.option(Gen.alphaStr),
+                  genStringList,
+                  Gen.alphaStr,
+                  Gen.alphaStr) {
+        case (searchTerm, errors, prompt, menu)  =>
+          val world = MMap.empty[String, Seq[String]]
+          import scalaz.\&/.This
+          val script = chooseHistory(
+                        searchTerm,
+                        prompt,
+                        This(errors),
+                        _ => menu)
+          val result = script.foldMap(new SaveHistoryFileInterpreter(world))
+
+          contentProp("chooseHistory:nohistory")(Seq(result), Seq(QuitHistory)) &&
+          contentProp("chooseHistory:logs")(
+            world("log"),
+            Seq("You have not made history.",
+                "Dabble writes out a history line when you successfully load a dependency and exit."))
+      }
+  }
+
+  property("should show full menu if no search term was supplied") = {
+      Prop.forAll(many(2)(genSimpleDabbleHistoryLine),
+                  Gen.alphaStr,
+                  Gen.alphaStr) {
+        case (lines, prompt, menu)  =>
+          val world  = MMap(s"ReadInput.${prompt}" -> Seq("q"))
+          import scalaz.\&/.That
+          val script = chooseHistory(
+                        None,
+                        prompt,
+                        That(lines),
+                        _.mkString(","))
+          val result = script.foldMap(new SaveHistoryFileInterpreter(world))
+
+          contentProp("chooseHistory:nosearchterm")(Seq(result), Seq(QuitHistory)) &&
+          contentProp("chooseHistory:logs")(world("log"), Seq(lines.mkString(",")))
+      }
+  }
 }
