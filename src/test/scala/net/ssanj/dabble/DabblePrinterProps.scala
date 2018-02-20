@@ -3,8 +3,10 @@ package net.ssanj.dabble
 import org.scalacheck.Properties
 import org.scalacheck.{Prop, Gen}
 import org.scalacheck.Prop.BooleanOperators
-import scalaz.{\/-, Show}
+import scalaz.{\/-, NonEmptyList, Show}
+import scalaz.NonEmptyList.nels
 import net.ssanj.dabble.Implicits._
+import ScalaCheckSupport.contentProp
 
 object DabblePrinterProps             extends
        Properties("A Dependency Printer") with
@@ -89,4 +91,81 @@ object DabblePrinterProps             extends
 
     (output == expected) :| labeled(output, expected)
    }
+
+  property("print initial sbt commands") = {
+    Prop.forAllNoShrink(genDependencies, genResolversWithEmpty, genMacroParadise) {  (deps, resolvers, mp) =>
+      val initialCommands = printInitialSbtCommands(deps, resolvers, mp)
+
+      val dependencyText = printLibraryDependenciesText(deps)
+      val dependencyInfo = s"${newline}Dabble injected the following libraries:" +
+                           s"${newline}${dependencyText}${newline}"
+      val resolverInfo =
+        if (resolvers.nonEmpty) {
+          val resolverText = printResolversAsText(resolvers)
+          s"${newline}Dabble injected the following resolvers:" +
+          s"${newline}${resolverText}${newline}"
+        } else ""
+
+
+      val mpInfo = mp.fold(""){ mpv =>
+        s"${newline}Dabble injected macro paradise version: " +
+        s"${mpv}${newline}"
+      }
+
+      val commands = s"""println("${dependencyInfo + resolverInfo + mpInfo}")"""
+      val expectedCommands = s"""initialCommands := "${replEscaped(commands)}""""
+
+      contentProp("initialCommands")(Seq(initialCommands), Seq(expectedCommands))
+    }
+  }
+
+  property("should format SBT build file from template and history line") =
+   Prop.forAll(genSbtTemplateContent, genDabbleHistoryLine) { (template, dhl) =>
+     val sbtTemplate = template.content
+     val sbtBuildFile = formatSbtTemplate(sbtTemplate, dhl)
+     val doubleNewlines = s"${newline}${newline}"
+
+     val deps = dhl.dependencies.list.toList
+     val expectedBuildFile = sbtTemplate + doubleNewlines +
+                             (if (dhl.resolvers.nonEmpty) (printResolvers(dhl.resolvers) + doubleNewlines) else "") +
+                             printLibraryDependency(deps) + doubleNewlines +
+                             dhl.mpVersion.map(printMacroParadise(_) + doubleNewlines).getOrElse("") +
+                             printInitialSbtCommands(deps, dhl.resolvers, dhl.mpVersion)
+
+      contentProp("build.sbt")(Seq(sbtBuildFile), Seq(expectedBuildFile))
+   }
+
+ property("print history line") =
+   Prop.forAll(genDabbleHistoryLine) {
+      case dhl@DabbleHistoryLine(deps: NonEmptyList[Dependency], res: Seq[Resolver], mpv: Option[String]) =>
+        val output = printHistoryLine(dhl)
+        val expectedDeps = deps.map(d =>
+                                        Show[DependencyHistoryString].
+                                          shows(DependencyHistoryString(d))).
+                                list.
+                                toList.
+                                mkString(" + ")
+
+        val expectedResolvers =
+          if (res.isEmpty) ""
+          else {
+            val r =  res.map(r => Show[ResolverString].shows(ResolverString(r))).mkString(",")
+            s""" -r ${r}"""
+          }
+
+        val expectedMacroParadiseVesion =
+          mpv.map(v => s""" -mp ${v}""").getOrElse("")
+
+        val expected = s"${expectedDeps}${expectedResolvers}${expectedMacroParadiseVesion}"
+
+        (output == expected) :| labeled(output.toArray.mkString(","), expected.toArray.mkString(","))
+   }
+
+property("print history lines") =
+  Prop.forAll(between(5, 10)(genDabbleHistoryLine)) { lines: Seq[DabbleHistoryLine] =>
+    val output   = printHistoryLines(lines)
+    val expected = lines.map(printHistoryLine).mkString(newline)
+
+    (output == expected) :| labeled(output.toArray.mkString(","), expected.toArray.mkString(","))
+  }
 }

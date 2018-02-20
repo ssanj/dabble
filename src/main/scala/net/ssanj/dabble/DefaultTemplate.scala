@@ -20,9 +20,12 @@ trait DefaultTemplate {
 
   val templateLineSeparator = s"${newline}${newline}"
 
-  lazy val inMemSbtTemplate = s"${templateHeader}${templateLineSeparator}"       +
-                              s"${templateName}${templateLineSeparator}"         +
-                              s"${templateOrganisation}${templateLineSeparator}" +
-                              s"${templateVersion}${templateLineSeparator}"      +
-                              s"${templateScalaVersion}"
+  def inMemSbtTemplate(separator: String): String =
+    s"${templateHeader}${separator}"       +
+    s"${templateName}${separator}"         +
+    s"${templateOrganisation}${separator}" +
+    s"${templateVersion}${separator}"      +
+    s"${templateScalaVersion}"
 }
+
+object DefaultTemplate extends DefaultTemplate

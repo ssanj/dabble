@@ -69,3 +69,39 @@ Found:
 [2] org.scalaz %% scalaz-core % 7.2.0
 [3] org.scalaz %% scalaz-core % 7.2.2
 [4] exit
+
+------
+
+//write out dependencies in the same format each time
+//dependencies and resolvers should be sorted before writing out
+
+history file
+
+
+"oncue.knobs" %% "core" % "3.6.+" -r "Oncue Bintray Repo @ http://dl.bintray.com/oncue/releases"
+"net.bmjames" %% "scala-optparse-applicative" % "0.3" -r "bintray:bmjames:maven, sonatype"
+"oncue.knobs" %% "core" % "3.6.1" -r "bintray:oncue:releases"
+"com.github.mpilquist" %% "simulacrum" % "0.7.0"
+"com.github.scopt" %% "scopt" % "3.4.0"
+"com.github.mpilquist" %% "simulacrum" % "0.7.0" -mp "2.1.0"
+  "com.github.julien-truffaut" %% "monocle-core" % "1.2.1" + "com.github.julien-truffaut" %% "monocle-generic" % "1.2.1" + "com.github.julien-truffaut" %% "monocle-macro" % "1.2.1" + "com.github.julien-truffaut" %% "monocle-state" % "1.2.1" + "com.github.julien-truffaut" %% "monocle-refined" % "1.2.1" + "com.github.julien-truffaut" %% "monocle-law" % "1.2.1" % "test" -mp "2.1.0"
+
+--------
+
+output
+
+dabble -hi knobs
+
+dabble found:
+
+[1] "oncue.knobs" %% "core" % "3.6.+" -r "Oncue Bintray Repo @ http://dl.bintray.com/oncue/releases"
+[2] "oncue.knobs" %% "core" % "3.6.1" -r "bintray:oncue:releases"
+[3] exit
+
+2
+
+dabble "oncue.knobs" %% "core" % "3.6.1" -r "bintray:oncue:releases"
+
+-------
+
+[] Should logging be separate from exit messages? Or should be dump all warnings on exit?

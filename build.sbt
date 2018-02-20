@@ -6,6 +6,7 @@ version := "0.2.0"
 
 scalaVersion := "2.11.8"
 
+
 libraryDependencies ++= Seq(
   "org.scalaz"       %% "scalaz-core"  % "7.2.2",
   "com.lihaoyi"      %% "ammonite-ops" % "0.5.7",
@@ -29,3 +30,5 @@ scalacOptions ++= Seq(
                       "-Ypatmat-exhaust-depth",
                       "40"
                      )
+
+addCommandAlias("precheckin", ";clean;scalastyle;scapegoat;test")

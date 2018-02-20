@@ -2,9 +2,12 @@ package net.ssanj.dabble
 
 import org.scalacheck.Properties
 import org.scalacheck.{Prop, Gen}
+import org.scalacheck.Prop.BooleanOperators
 import org.scalacheck.Gen.{posNum, negNum}
 import scalaz._
 import scalaz.std.list._
+
+import DabbleProps._
 
 object DependencyParserProps extends Properties("DependencyParser") with DabbleProps {
 
@@ -41,8 +44,17 @@ property("returns a valid list of dependencies from a valid list of inputs")=
   }
 
 property("returns an empty list of dependencies if the input is invalid") =
-  Prop.forAll(emptyInput) { inputs: Seq[String] =>
+  Prop.forAll(genDependency) { inputs: Seq[String] =>
+    val invalidInputs = inputs.map(_.replace("%", "#"))
+    val -\/(error) = DependencyParser.parseDependencies(invalidInputs)
+    (error == s"unable to derive dependencies from: ${invalidInputs.mkString(",")}") :|
+      labeled(error.toString, s"unable to derive dependencies from: ${invalidInputs.mkString(",")}")
+  }
+
+property("returns an empty list of dependencies if the input is empty") =
+  Prop.forAll(Gen.const(Seq.empty[String])) { inputs: Seq[String] =>
     val -\/(error) = DependencyParser.parseDependencies(inputs)
-    error == s"unable to derive dependencies from: $inputs"
+      (error ==  s"unable to derive dependencies from empty input") :|
+        labeled(error.toString, s"unable to derive dependencies from empty input")
   }
 }

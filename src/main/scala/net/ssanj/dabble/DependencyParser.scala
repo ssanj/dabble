@@ -12,6 +12,7 @@ sealed trait Dependency
 final case class ScalaVersionSupplied(org: String, name: String, version: String, config: Option[String] = None) extends Dependency
 final case class ScalaVersionDerived (org: String, name: String, version: String, config: Option[String] = None) extends Dependency
 
+final case class DependencyHistoryString(dependency: Dependency)
 /**
  * Parses the inputs into a Seq[Dependency. Dependencies can be specified in two forms:
  *  1. org  % name % version [[ScalaVersionSupplied]]
@@ -34,6 +35,7 @@ final case class ScalaVersionDerived (org: String, name: String, version: String
  * }}}
  *
  */
+
 trait DependencyParser  {
 
   /**
@@ -42,7 +44,7 @@ trait DependencyParser  {
    * @return A -\/ with an error  or a \/- with a Seq[Dependency].
    */
   def parseDependencies(inputs: Seq[String]): String \/ Seq[Dependency] = {
-    if (inputs.isEmpty) s"unable to derive dependencies from: $inputs".left
+    if (inputs.isEmpty) "unable to derive dependencies from empty input".left
     else parse(inputs, Seq.empty[Dependency])
   }
 
@@ -73,10 +75,17 @@ trait DependencyParser  {
     case Seq("+", org, "%", name, "%", version, t@_*) =>
       parse(t, dependencies :+ ScalaVersionSupplied(org, name, version))
 
-    case Seq("+") if (!dependencies.isEmpty) => dependencies.right
+    case Seq("+") if (dependencies.nonEmpty) => dependencies.right
 
-    case xs => s"unable to derive dependencies from: $xs".left
+    case xs => s"unable to derive dependencies from: ${xs.mkString(",")}".left
   }
 }
 
-object DependencyParser extends DependencyParser
+object DependencyParser extends DependencyParser {
+  def toInputStrings(deps: Seq[Dependency]): Seq[String] = IList(deps map {
+    case ScalaVersionSupplied(org, name, version, None)         => Seq(org, "%",  name, "%", version)
+    case ScalaVersionSupplied(org, name, version, Some(config)) => Seq(org, "%",  name, "%", version, "%", config)
+    case ScalaVersionDerived (org, name, version, None)         => Seq(org, "%%",  name, "%", version)
+    case ScalaVersionDerived (org, name, version, Some(config)) => Seq(org, "%%", name, "%", version, "%", config)
+  }: _*).intersperse(Seq("+")).toList.flatten
+}

@@ -28,7 +28,7 @@ case class ReleaseAndSnapshots(repoHost: RepoHost, releaseType: ReleaseType) ext
 case class Directory(host: DirectoryHost) extends Resolver
 case class Custom(name: String, url: URL) extends Resolver
 
-final case class ResolverString(ressolver: Resolver)
+final case class ResolverString(resolver: Resolver)
 
 object ReleaseAndSnapshotString {
   def unapply(value: String): Option[(RepoHost, ReleaseType)] = value match {
@@ -95,7 +95,7 @@ trait ResolverParser {
         parse(t, resolvers :+ Bintray(owner, repo))
       case Seq(CustomStr(name, url), t@_*) =>
         parse(t, resolvers :+ Custom(name, url))
-      case r => s"unknown repository type: $r".left
+      case r => s"unknown repository type: ${r.mkString(",")}".left
     }
   }
 }

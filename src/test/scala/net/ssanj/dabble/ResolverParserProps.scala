@@ -10,11 +10,23 @@ import ResolverParser._
 
 object ResolverParserProps extends Properties("ResolverParser") with DabbleProps {
 
-  property("returns a single valid resolver") =
-    Prop.forAllNoShrink(genResolverString) { input: String =>
-        val \/-(Seq(resolver)) = ResolverParser.parseResolvers(Seq(input))
-        val result =
-          resolver match {
+  property("returns multiple valid resolvers") =
+    Prop.forAllNoShrink(genResolverStrings) { inputs: String =>
+        val parsedInputs =
+          inputs.
+            split(",").
+            map(_.trim).
+            map{ in =>
+              if (in.contains("@")) {
+               //We trim spaces for custom resolvers, so we can't have an exact match
+                val Array(name, url) = in.split("@")
+                s"${name.trim}@${url.trim}"
+              } else in
+            }
+
+        val \/-(resolvers) = ResolverParser.parseResolvers(inputs.split(",").toSeq)
+        val result: String =
+          resolvers.map {
             case ReleaseAndSnapshots(Sonatype    , Public)   => s"sonatype"
             case ReleaseAndSnapshots(Sonatype    , Release)  => s"sonatype:r"
             case ReleaseAndSnapshots(Sonatype    , Snapshot) => s"sonatype:s"
@@ -31,15 +43,10 @@ object ResolverParserProps extends Properties("ResolverParser") with DabbleProps
             case Directory(Jcenter)                          => "jcenter"
             case Bintray(owner, repo)                        => s"bintray:$owner:$repo"
             case Custom(name, url)                           => s"$name@${url.toExternalForm}"
-          }
+          }.mkString(",")
 
-        //We trim spaces, so we can't have an exact match
-        if (input.contains("@")) {
-          val Array(name, url) = input.split("@")
-          val inputWithoutSpaces = s"${name.trim}@${url.trim}"
-          (inputWithoutSpaces == result) :| labeled(result, inputWithoutSpaces)
-        } else {
-          (input == result) :| labeled(result, input)
-        }
+          val parsedInputsString = parsedInputs.mkString(",")
+
+          (result == parsedInputsString) :| labeled(result.toArray.mkString("|"), parsedInputsString.toArray.mkString("|"))
     }
   }

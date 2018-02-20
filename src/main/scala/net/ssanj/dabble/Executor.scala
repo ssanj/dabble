@@ -3,43 +3,90 @@ package net.ssanj.dabble
 import scala.util.Try
 import ammonite.ops._
 import scalaz._
+import scalaz.NonEmptyList.nels
 import scalaz.syntax.std.`try`._
+import scalaz.syntax.either._
+import scalaz.syntax.applicative._
+import \&/.{This, That, Both}
+import DabblePrinter._
+import DabbleHistory._
+import DabblePaths._
+import DefaultTemplate._
+import TerminalSupport._
 
-trait Executor { self: DefaultTemplate with DabblePrinter =>
+trait Executor {
+  type Outcome = Seq[String] \&/ Unit
 
-  val userHomePath = Path(userHome)
-  protected case class ExecutionResult(message: Option[String], code: Int)
-
-  protected case class DabbleWork(path: Path)
-  protected case class DabbleTemplates(path: Path)
-
-  protected case class DabbleHome(path: Path) {
-    def work = DabbleWork(path/'work)
-    def templates = DabbleTemplates(path/'templates)
-  }
-
-  protected val dabbleHome = DabbleHome(userHomePath/".dabble")
-
-  protected def exit(result: ExecutionResult): Unit = {
+  def exit(result: ExecutionResult): Unit = {
     result.message.foreach(m => log(m))
     System.exit(result.code)
   }
 
-  protected def processingFailed(error: String): ExecutionResult = ExecutionResult(Option(error), 1)
+  def processingFailed(error: String): ExecutionResult = ExecutionResult(Option(error), 1)
 
-  protected val processingFailed: ExecutionResult = ExecutionResult(None, 1)
+  val processingFailed: ExecutionResult = ExecutionResult(None, 1)
 
-  protected def build(dependencies: Seq[Dependency], resolvers: Seq[Resolver], mpVersion: Option[String]): ExecutionResult = {
+  def build(dependencies: Seq[Dependency],
+            resolvers: Seq[Resolver],
+            mpVersion: Option[String],
+            hlaw: HistoryLinesAndWarnings): ExecutionResult = {
     Try {
       log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
       genBuildFileFrom(dabbleHome, dependencies, resolvers, mpVersion)
 
       val result = %(getSBTExec, "console-quick")(dabbleHome.work.path)
-      ExecutionResult(if (result == 0) Option("Dabble completed successfully.") else Option("Could not launch console. See SBT output for details."), result)
+
+      val (message, code) =
+        if (result == 0) {
+          writeToHistoryFile(dependencies, resolvers, mpVersion, hlaw) match {
+            case This(errors)      => (s"Could not update history file ${dabbleHome.history}," +
+                                        s" due to the following errors: ${errors.mkString(newline)}", -1)
+
+            case That(_)           => ("Dabble completed successfully.", result)
+
+            case Both(warnings, _) => ("Dabble completed successfully" +
+                                        ", but had the following warnings: " +
+                                        s"${warnings.mkString(newline)}", result)
+          }
+        } else ("Could not launch console. See SBT output for details.", result)
+
+      ExecutionResult(Option(message), code)
     }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
   }
 
-  protected def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver],
+  def readFile(filename: Path): Seq[String] = {
+      Try(read.lines(filename, "UTF-8")).
+        toOption.
+        getOrElse(Seq.empty[String])
+  }
+
+  def readHistoryFileWithWarnings(): HistoryLinesAndWarnings = {
+    val lines = readFile(dabbleHome.history)
+    readHistoryWithWarnings(historyParser.parse(_, DabbleRunConfig()))(lines)
+  }
+
+
+  private def writeToHistoryFile(dependencies: Seq[Dependency],
+                                 resolvers: Seq[Resolver],
+                                 mpVersion: Option[String],
+                                 hlaw: HistoryLinesAndWarnings): Outcome = {
+    val newHistoryLine = DabbleHistoryLine(nels(dependencies.head, dependencies.tail:_*), resolvers, mpVersion)
+
+    import scala.collection.mutable.LinkedHashSet
+    val unqiueHistoryLines = LinkedHashSet() ++ (newHistoryLine +: hlaw.onlyThat.getOrElse(Seq.empty))
+
+    //TODO: Encode errors and warnings separately.
+    //sealed trait Failure
+    //final case class Error(message: String) extends Failure
+    //final case class Warning(message: String) extends Failure
+    Try(write.over(dabbleHome.history, printHistoryLines(unqiueHistoryLines.toSeq))).
+      cata(
+        {_ => hlaw.bimap(identity, _ => ()) },
+        e  => hlaw.bimap(_ => Seq(e.getMessage), _ => ())
+      )
+  }
+
+  def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver],
     mpVersion: Option[String]): Unit = {
 
     val defaultSbtTemplate   = home.path/defaultBuildFile
@@ -50,7 +97,7 @@ trait Executor { self: DefaultTemplate with DabblePrinter =>
         read(defaultSbtTemplate)
       } else {
         log("Using in-memory sbt template. Create a build.sbt file in ~/.dabble/ to override.")
-        inMemSbtTemplate
+        inMemSbtTemplate(newlines(2))
       }
 
     val initialCommands     = getInitialCommands(dependencies, resolvers, mpVersion)
@@ -66,23 +113,27 @@ trait Executor { self: DefaultTemplate with DabblePrinter =>
                 formattedSbtTemplateContent  +
                 formattedResolverString      +
                 formattedSbtDependencyString +
-                formattedMacroParadise    +
+                formattedMacroParadise       +
                 initialCommands)
   }
 
   private def getInitialCommands(dependencies: Seq[Dependency], resolvers: Seq[Resolver],
     mpVersion: Option[String]): String = {
+
     val dependencyText = printLibraryDependenciesText(dependencies)
+
     val resolverText   = printResolversAsText(resolvers)
 
     val depString      = s"${newline}Dabble injected the following libraries:" +
                           s"${newline}${dependencyText}${newline}"
+
     val resolverString = if (resolvers.nonEmpty) {
                           s"${newline}Dabble injected the following resolvers:" +
-                            s"${newline}${resolverText}${newline}"
+                           s"${newline}${resolverText}${newline}"
                          } else ""
+
     val cpString       = mpVersion.fold("")(v => s"${newline}Dabble injected macro paradise version:" +
-                                                   s" ${v}${newline}")
+                                                  s" ${v}${newline}")
     val injections     = depString      +
                          resolverString +
                          cpString
@@ -92,5 +143,9 @@ trait Executor { self: DefaultTemplate with DabblePrinter =>
     s"""initialCommands := "${replEscaped(replString)}""""
   }
 
-  def getSBTExec = if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "sbt.bat" else "sbt"
+  def getSBTExec: String =
+    if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "sbt.bat"
+    else "sbt"
 }
+
+object Executor extends Executor

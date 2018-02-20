@@ -3,12 +3,21 @@ package net.ssanj.dabble
 import org.scalacheck.{Gen, Shrink}
 import org.scalacheck.Gen.{posNum, negNum}
 import scalaz._
+import scalaz.NonEmptyList
+import scalaz.NonEmptyList.nels
 import scalaz.std.list._
+
+import DabblePathTypes.{DirPath, FilePath, DabbleHomePath}
 
 trait DabbleProps {
 
  private [dabble] def genShortStrings: Gen[String] = for {
     length <- Gen.choose(3, 10)
+    value  <- Gen.listOfN(length, Gen.alphaLowerChar)
+  } yield value.mkString
+
+ private [dabble] def genStrings: Gen[String] = for {
+    length <- Gen.choose(10, 15)
     value  <- Gen.listOfN(length, Gen.alphaLowerChar)
   } yield value.mkString
 
@@ -70,6 +79,8 @@ trait DabbleProps {
 
   private[dabble] def labeled(actual: String, expected: String): String = s"expected:${newline}${tab}${expected}${newline}got:${newline}${tab}$actual"
 
+  private[dabble] def labeled(property: String)(actual: String, expected: String): String = s"$property: expected:${newline}${tab}[${expected}]${newline}got:${newline}${tab}[$actual]"
+
   private[dabble] implicit val dependencyShrink: Shrink[Seq[Dependency]] = Shrink[Seq[Dependency]] {
     case Seq() => Stream.empty
     case Seq(one) => Stream.empty
@@ -129,6 +140,9 @@ trait DabbleProps {
               genBintrayResolverString,
               genCustomResolverString)
 
+  private[dabble] def genResolverStrings: Gen[String] =
+    between(1, 10)(genResolverString).map(_.mkString(","))
+
   private [dabble] def genResolverStringList: Gen[Seq[String]] =
     (for {
       length   <- Gen.choose(1, 3)
@@ -143,6 +157,58 @@ trait DabbleProps {
 
   private[dabble] def genResolvers: Gen[Seq[Resolver]] =
     genResolverStringList.map(r => ResolverParser.parseResolvers(r).fold(failGen[Seq[Resolver]], identity))
+
+  private[dabble] def genResolversWithEmpty: Gen[Seq[Resolver]] =
+    Gen.oneOf(genResolvers, Gen.const(Seq.empty[Resolver]))
+
+  private[dabble] def genMacroParadise: Gen[Option[String]] =
+    Gen.oneOf(genLibraryVersion.map(Option(_)), Gen.const(None: Option[String]))
+
+  private[dabble] def genDabbleHistoryLine: Gen[DabbleHistoryLine] = for {
+    deps <- genDependencies.map(d => nels(d.head, d.tail:_*))
+    res  <- genResolversWithEmpty
+    mpv  <- genMacroParadise
+  } yield DabbleHistoryLine(deps, res, mpv)
+
+  //History file lines should not have any extraneous spaces within resolvers
+  private[dabble] def genDabbleHistoryFileLine: Gen[DabbleHistoryLine] = for {
+    deps <- genDependencies.map(d => nels(d.head, d.tail:_*))
+    res  <- genResolversWithEmpty.map(_.map {
+              case Custom(name, url) => Custom(name.replace(" ", ""), url)
+              case other => other
+            })
+    mpv  <- genMacroParadise
+  } yield DabbleHistoryLine(deps, res, mpv)
+
+  private[dabble] def genInvalidDabbleHistoryLineInputs: Gen[(Seq[String], Seq[String], Seq[String], Seq[String])] = {
+    import Implicits._
+    for {
+      validDeps   <- genDependencies.map(DependencyParser.toInputStrings)
+      invalidDeps <- genDependencies.map(deps => DependencyParser.toInputStrings(deps).map(
+                      _.replace("%", "#")))
+      validRes    <- genResolvers.map(_.map(r => implicitly[Show[ResolverString]].shows(ResolverString(r))))
+      invalidRes  <- genResolvers.map(_.map(r => implicitly[Show[ResolverString]].shows(ResolverString(r)).
+                      drop(2).replace("@", "$$")))
+    } yield (validDeps, validRes, invalidDeps, invalidRes)
+  }
+
+  private[dabble] def genSimpleDabbleHistoryLine: Gen[DabbleHistoryLine] =
+    genDabbleHistoryLine.
+      map(dhl => dhl.copy(
+                  dependencies = nels(dhl.dependencies.head),
+                  resolvers = Seq.empty,
+                  mpVersion = None))
+
+  private[dabble] def between[T](min: Int, max: Int)(gen: Gen[T]): Gen[Seq[T]] = for {
+    l <- Gen.choose(Math.max(0, min), Math.min(Int.MaxValue, max))
+    v <- Gen.listOfN(l, gen)
+  } yield v
+
+  private[dabble] def many[T](count: Int)(gen: Gen[T]): Gen[Seq[T]] = Gen.listOfN(count, gen)
+
+  private[dabble] def manyPairs[A, B](count: Int)(genA: Gen[A], genB: Gen[B]): Gen[Seq[(A, B)]] = {
+    Gen.listOfN(count, genA.flatMap(a => genB.map(b => (a, b))))
+  }
 
   private[dabble] implicit val resolverShrink: Shrink[Seq[Resolver]] = Shrink[Seq[Resolver]] {
     case Seq() => Stream.empty
@@ -165,5 +231,139 @@ trait DabbleProps {
     minor <- Gen.choose(1, 10)
     patch <- Gen.choose(1, 30)
  } yield s"${major}.${minor}.${patch}"
+
+  private[dabble] def invalidDependenciesGen: Gen[Seq[String]] = for {
+    l <- Gen.choose(1, 5)
+    deps <- many(l)(genDependency.map(_.drop(1).mkString(" ")))
+  } yield deps
+
+  private[dabble] case class SbtTemplateContent(content: String)
+
+  private lazy val projSbtTemplate = """name := "Dabble"
+
+organization := "net.ssanj"
+
+version := "0.2.0"
+
+scalaVersion := "2.11.8"
+
+libraryDependencies ++= Seq(
+  "org.scalaz"       %% "scalaz-core"  % "7.2.2",
+  "com.lihaoyi"      %% "ammonite-ops" % "0.5.7",
+  "com.github.scopt" %% "scopt"        % "3.4.0",
+  "org.scalatest"    %% "scalatest"    % "2.2.4"  % "test",
+  "org.scalacheck"   %% "scalacheck"   % "1.12.5" % "test"
+)
+
+scalacOptions ++= Seq(
+                      "-unchecked",
+                      "-deprecation",
+                      "-feature",
+                      "-Xfatal-warnings",
+                      "-Xlint:_",
+                      "-Ywarn-dead-code",
+                      "-Ywarn-inaccessible",
+                      // "-Ywarn-unused-import",
+                      "-Ywarn-infer-any",
+                      "-Ywarn-nullary-override",
+                      "-Ywarn-nullary-unit",
+                      "-Ypatmat-exhaust-depth",
+                      "40"
+                     )
+"""
+
+  import DefaultTemplate._
+  private[dabble] def genSbtTemplateString: Gen[String] = for {
+    header       <- Gen.alphaStr
+    name         <- Gen.alphaStr
+    org          <- genOrg
+    version      <- genVersion
+    scalaVersion <- genVersion
+  } yield {
+    s"//generated by $header"       + newline +
+    s"""name := "${name}""""        + newline +
+    s"""organization := "${org}"""" + newline +
+    s"""version := "${version}""""  + newline +
+    s"""scalaVersion := "${scalaVersion}""""
+  }
+
+  private[dabble] def genSbtTemplateContent: Gen[SbtTemplateContent] =
+    Gen.oneOf(Gen.const(projSbtTemplate), genSbtTemplateString).map(SbtTemplateContent)
+
+  private[dabble] def genDirPath: Gen[DirPath] = for {
+    pathLength <- Gen.choose(3, 10)
+    path       <- Gen.listOfN(pathLength, genShortStrings)
+  } yield DirPath(path.mkString("/"))
+
+  private[dabble] def genFilePath: Gen[FilePath] = for {
+    pathLength <- Gen.choose(3, 10)
+    path       <- Gen.listOfN(pathLength, genShortStrings)
+    filename   <- genShortStrings
+  } yield FilePath(DirPath(path.mkString("/")), filename)
+
+  private[dabble] def genDabbleHomePath: Gen[DabbleHomePath] = genDirPath.map(DabbleHomePath)
+
+  private[dabble] case class Word(word: String)
+
+  private[dabble] def genWord: Gen[Word] = for {
+    l       <- Gen.choose(5, 10)
+    letters <- Gen.listOfN(l, Gen.alphaLowerChar)
+  } yield Word(letters.mkString)
+
+  private[dabble] def genWords: Gen[Seq[Word]] = for {
+    l     <- Gen.choose(5, 10)
+    words <- Gen.listOfN(l, genWord)
+  } yield words
+
+  private[dabble] case class SearchTerm(term: String)
+
+  private[dabble] case class HistorySearchCombo(dhls: Seq[DabbleHistoryLine], term: SearchTerm, matched: Seq[DabbleHistoryLine])
+
+  private[dabble] def genNameFromTerm(searchTerm: SearchTerm): Gen[String] = {
+    val term = searchTerm.term
+    Gen.oneOf(Gen.const(term),
+              genShortStrings.map(s => term + s),
+              genShortStrings.map(s => s + term),
+              genShortStrings.map(s => s + term).flatMap(st => st + genShortStrings))
+  }
+
+  private[dabble] def genDependencyFromTerm(term: SearchTerm): Gen[Dependency] = for {
+    matched    <- genNameFromTerm(term)
+    other      <- genShortStrings
+    version    <- genVersion
+    matchedOrg <- Gen.oneOf(true, false)
+    org        <- Gen.const(if (matchedOrg) matched else other)
+    name       <- Gen.const(if (!matchedOrg) matched else other)
+    dep        <- Gen.oneOf(ScalaVersionSupplied(org, name, version), ScalaVersionDerived(org, name, version))
+  } yield dep
+
+  private[dabble] def genDabbleHistoryLineFromTerm(term: SearchTerm): Gen[DabbleHistoryLine] = for {
+    dep  <- genDependencyFromTerm(term)
+    deps <- genDependencies
+    shuffled = scala.util.Random.shuffle(dep +: deps)
+  } yield DabbleHistoryLine(dependencies = nels(shuffled.head, shuffled.tail:_*))
+
+  private[dabble] def genMatchingHistorySearchCombo: Gen[HistorySearchCombo] = for {
+      term      <- genShortStrings.map(SearchTerm)
+      n         <- Gen.choose(1, 3)
+      pMatched  <- Gen.listOfN(n, genDabbleHistoryLineFromTerm(term))
+      matched   <- Gen.someOf(pMatched)
+      l         <- Gen.choose(2, 3)
+      unmatched <- Gen.listOfN(l, genSimpleDabbleHistoryLine)
+  } yield HistorySearchCombo(scala.util.Random.shuffle(matched ++ unmatched), term, matched)
+
+  private[dabble] def md5(values: Any*): String = {
+    import java.security.MessageDigest
+    MessageDigest.getInstance("MD5").
+      digest(values.map(_.toString).mkString.getBytes).map("%02x".format(_)).mkString
+  }
+
+  private[dabble] def genStringList: Gen[Seq[String]] = for {
+    length  <- Gen.choose(2, 5)
+    values  <- Gen.listOfN(length, Gen.alphaStr)
+  } yield values
+
 }
+
+object DabbleProps extends DabbleProps
 

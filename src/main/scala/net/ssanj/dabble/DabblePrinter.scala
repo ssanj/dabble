@@ -76,7 +76,7 @@ trait DabblePrinter {
    */
   def printLibraryDependenciesText(deps: Seq[Dependency]): String =  {
     val depStrings = deps.map(Show[Dependency].shows).map(_.replace("\"", ""))
-    depStrings.zipWithIndex.map{ case (d, i) => s"[${i+1}] $d" }.mkString(newline)
+    depStrings.zipWithIndex.map{ case (d, i) => s"[${i + 1}] $d" }.mkString(newline)
   }
 
 /**
@@ -99,7 +99,7 @@ trait DabblePrinter {
    */
   def printResolversAsText(resolvers: Seq[Resolver]): String = {
     val resolverStrings = resolvers.map(r => Show[ResolverString].shows(ResolverString(r)))
-    resolverStrings.zipWithIndex.map { case (r, i) => s"[${i+1}] $r" }.mkString(newline)
+    resolverStrings.zipWithIndex.map { case (r, i) => s"[${i + 1}] $r" }.mkString(newline)
   }
 
   /**
@@ -111,7 +111,104 @@ trait DabblePrinter {
                                                  replace("\t", "\\\\t").
                                                  replace("\"", "\\\"")
 
+  /** Prints initial commands on launching SBT.
+    *
+    * @example {{{
+    * Dabble injected the following libraries:
+    * [1] org.scalaz %% scalaz-core % 7.1.4
+    * [2] org.scalatest %% scalatest % 2.2.4
+    * }}}
+    *
+    * @param dependencies Dependencies
+    * @param resolvers Resolvers
+    * @param mpVersion Macro paradise version
+    */
+  def printInitialSbtCommands(dependencies: Seq[Dependency], resolvers: Seq[Resolver],
+    mpVersion: Option[String]): String = {
+
+    val dependencyText = printLibraryDependenciesText(dependencies)
+
+    val resolverText   = printResolversAsText(resolvers)
+
+    val depString      = s"${newline}Dabble injected the following libraries:" +
+                          s"${newline}${dependencyText}${newline}"
+
+    val resolverString = if (resolvers.nonEmpty) {
+                          s"${newline}Dabble injected the following resolvers:" +
+                           s"${newline}${resolverText}${newline}"
+                         } else ""
+
+    val cpString       = mpVersion.fold("")(v => s"${newline}Dabble injected macro paradise version:" +
+                                                  s" ${v}${newline}")
+    val injections     = depString      +
+                         resolverString +
+                         cpString
+
+    val replString     = s"""println("${injections}")"""
+
+    s"""initialCommands := "${replEscaped(replString)}""""
+  }
+
   def printMacroParadise(version: String): String =
     s"""addCompilerPlugin("org.scalamacros" % "paradise" % "${version}" cross CrossVersion.full)"""
 
+
+  /** Formats the SBT build file given a template and a history line.
+    *
+    * The history line is appended to the supplied template. That way you can
+    * always customize your SBT template but override as needed through the
+    * history line.
+    *
+    *  @param sbtTemplateContent The base SBT template to use.
+    *  @param line The [[DabbleHistoryLine]] to insert into the template.
+    *  @see [[DabbleHistoryLine]]
+    */
+  def formatSbtTemplate(sbtTemplateContent: String, line: DabbleHistoryLine): String = {
+    val dependencies        = line.dependencies.list.toList
+    val resolvers           = line.resolvers
+    val mpVersion           = line.mpVersion
+
+    val doubleLineSepator   = s"${newline}${newline}"
+    val initialCommands     = printInitialSbtCommands(dependencies, resolvers, mpVersion)
+
+    val sbtDependencyString = printLibraryDependency(dependencies)
+    val sbtResolverString   = printResolvers(resolvers)
+
+    val formattedSbtTemplateContent  = sbtTemplateContent + doubleLineSepator
+    val formattedSbtDependencyString = sbtDependencyString + doubleLineSepator
+    val formattedResolverString      = (if (resolvers.nonEmpty) (sbtResolverString + doubleLineSepator) else "")
+    val formattedMacroParadise       = mpVersion.map(printMacroParadise).fold("")(_ + doubleLineSepator)
+
+    formattedSbtTemplateContent  +
+    formattedResolverString      +
+    formattedSbtDependencyString +
+    formattedMacroParadise       +
+    initialCommands
+  }
+
+
+  def printHistoryLines(lines: Seq[DabbleHistoryLine]): String =
+    lines.map(printHistoryLine).mkString(newline)
+
+  def printHistoryLine(line: DabbleHistoryLine): String = {
+
+      val depsString =
+        line.dependencies.map(d => Show[DependencyHistoryString].shows(DependencyHistoryString(d))).list.toList.mkString(" + ")
+
+      val resOp =
+        if (line.resolvers.isEmpty) None
+        else Option(line.resolvers.
+                      map(r => Show[ResolverString].shows(ResolverString(r))).
+                      mkString(",")).map(r => s"-r ${r}")
+
+        val mpvOp = line.mpVersion.map(v => s"$v").map(v => s"-mp $v")
+
+      Seq(Option(depsString),
+          resOp,
+          mpvOp).
+        flatten.
+        mkString(" ")
+  }
 }
+
+object DabblePrinter extends DabblePrinter
