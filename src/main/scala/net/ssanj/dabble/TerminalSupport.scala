@@ -61,7 +61,7 @@ trait TerminalSupport {
    )
   }
 
-  private def toggle(name: String, shortName: Option[String] = None)(f: DabbleRunConfig => Unit)(op: scopt.OptionParser[DabbleRunConfig]): Unit = {
+  private def toggle(name: String, shortName: Option[String])(f: DabbleRunConfig => Unit)(op: scopt.OptionParser[DabbleRunConfig]): Unit = {
     val opDef = op.opt[Unit](name)
     shortName.map(opDef.abbr).getOrElse(opDef) action { (_, c) =>
       f(c)

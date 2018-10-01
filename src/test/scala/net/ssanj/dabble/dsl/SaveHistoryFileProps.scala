@@ -3,16 +3,11 @@ package dsl
 
 import scala.collection.mutable.{Map => MMap}
 import scalaz._
-import scalaz.Id.Id
-import scalaz.syntax.either._
-import \&/._
 import org.scalacheck.Properties
-import org.scalacheck.{Prop, Gen}
+import org.scalacheck.Prop
 import org.scalacheck.Prop.BooleanOperators
 
 import DabbleProps._
-import DabbleDslDef._
-import DabbleHistory.HistoryLinesAndWarnings
 import DependencyCommands.saveHistoryFile
 
 import ScalaCheckSupport._

@@ -1,4 +1,4 @@
-scapegoatVersion := "1.1.0"
+scapegoatVersion in ThisBuild := "1.3.8"
 
 scapegoatDisabledInspections := Seq("RedundantFinalModifierOnCaseClass",
                                     "AsInstanceOf", /* false positive */

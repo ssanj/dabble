@@ -1,7 +1,6 @@
 package net.ssanj.dabble
 
 import org.scalacheck.Properties
-import org.scalacheck.Prop.BooleanOperators
 import org.scalacheck.{Prop, Gen}
 
 import scalaz._
@@ -80,8 +79,6 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
     Prop.forAllNoShrink(genMultipleDependencyLines, genMultipleInvalidDependencyLines) {
         case (validLines, invalidLines) =>
 
-        import \&/._
-
         val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
 
         val validAndInvalidLines = validLines ++ invalidLines
@@ -121,7 +118,6 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
 
   property("generate valid HistoryLinesOrWarnings for This") =
     Prop.forAllNoShrink(genMultipleInvalidDependencyLines) { invalidLines =>
-        import \&/._
 
         val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
 
@@ -147,7 +143,6 @@ object DabbleHistoryProps extends Properties("DabbleHistory file parsing") {
 
   property("generate valid HistoryLinesOrWarnings for That") =
     Prop.forAllNoShrink(genMultipleDependencyLines) { validLines =>
-        import \&/._
 
         val hParser = historyParser.parse(_: Array[String], DabbleRunConfig())
 

@@ -16,7 +16,7 @@ trait DefaultTemplate {
 
   val templateVersion = """version := "0.0.1""""
 
-  val templateScalaVersion = """scalaVersion := "2.11.7""""
+  val templateScalaVersion = """scalaVersion := "2.12.7""""
 
   val templateLineSeparator = s"${newline}${newline}"
 

@@ -3,15 +3,12 @@ package net.ssanj.dabble
 import scala.io.StdIn.readLine
 import scala.util.Try
 
-import scalaz.{Success, \/, -\/, \/-}
+import scalaz.{\/, -\/, \/-}
 import scalaz.syntax.either._
 
 import DependencyParser._
 import ResolverParser._
 import DabblePrinter._
-import DabbleHistory._
-import DabblePaths._
-import DefaultTemplate._
 import TerminalSupport._
 import Banner._
 import Executor._

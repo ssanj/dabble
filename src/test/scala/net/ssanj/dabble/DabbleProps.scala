@@ -1,9 +1,7 @@
 package net.ssanj.dabble
 
 import org.scalacheck.{Gen, Shrink}
-import org.scalacheck.Gen.{posNum, negNum}
 import scalaz._
-import scalaz.NonEmptyList
 import scalaz.NonEmptyList.nels
 import scalaz.std.list._
 
@@ -272,7 +270,6 @@ scalacOptions ++= Seq(
                      )
 """
 
-  import DefaultTemplate._
   private[dabble] def genSbtTemplateString: Gen[String] = for {
     header       <- Gen.alphaStr
     name         <- Gen.alphaStr

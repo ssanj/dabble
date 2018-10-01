@@ -3,8 +3,6 @@ package dsl
 
 import scala.collection.mutable.LinkedHashSet
 
-import ammonite.ops._
-
 import scalaz._
 import scalaz.syntax.bind._
 import DabbleHistory._
@@ -14,14 +12,8 @@ import DabblePathTypes._
 import DefaultTemplate._
 import CommonCommands._
 import DabblePrinter.formatSbtTemplate
-import ResolverParser._
 
 object DependencyCommands {
-
-  //TODO: Delete once we have the EitherT sorted out
-  @SuppressWarnings(Array("UnusedMethodParameter"))
-  def launchDabble(dabbleHomePath: DabbleHomePath, line: DabbleHistoryLine): DabbleScript[ErrorOr[Unit]] = ???
-  //TODO: split this method up
 
   //TODO: This should be done in the interpreter.
   //we probably don't need getSBTExec. CallProcess should be given the correct
@@ -37,7 +29,7 @@ object DependencyCommands {
 
   def executeSbt(dabbleHomePath: DabbleHomePath): DabbleScript[ErrorOr[Unit]] = for {
     sbt    <- getSBTExec
-    result <- callProcess(sbt, "console-quick", dabbleHomePath.work.path.dir)
+    result <- callProcess(sbt, "consoleQuick", dabbleHomePath.work.path.dir)
   } yield result
 
   def readSbtTemplateOrDefault(defaultSbtTemplate: String): DabbleScript[String] = {

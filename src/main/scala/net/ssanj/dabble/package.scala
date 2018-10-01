@@ -2,7 +2,6 @@ package net.ssanj
 
 import scalaz.Show
 import scalaz.Show.shows
-import scalaz.ValidationNel
 
 package object dabble {
 

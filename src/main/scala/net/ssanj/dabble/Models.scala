@@ -1,7 +1,6 @@
 package net.ssanj.dabble
 
 import scalaz._
-import scala.language.implicitConversions
 
 sealed trait ExitCode { val code: Int }
 case object SuccessfulAction extends ExitCode { val code = 0}
@@ -20,7 +19,7 @@ object ExecutionResult2 {
   def withResult(ec: ExitCode): ExecutionResult2 = ExecutionResult2(None, ec)
 }
 
-sealed trait DabbleResult
+sealed trait DabbleResult extends Product with Serializable
 final case class DabbleSuccess(warnings: Seq[String]) extends DabbleResult
 final case class DabbleFailure(failures: NonEmptyList[String]) extends DabbleResult
 

@@ -7,7 +7,6 @@ import ammonite.ops._
 import scalaz._
 import scalaz.Id.Id
 import scalaz.syntax.std.`try`._
-import scalaz.syntax.either._
 
 import DabbleDslDef._
 
@@ -43,11 +42,7 @@ class DabbleConsoleInterpreter extends (DabbleDsl ~> Id) {
     case CallProcess(filename: String, arguments: String, workingDir: String) =>
       Try(%(filename, arguments)(Path(workingDir))).
       toDisjunction.
-      leftMap(x => s"Could not run dabble due to: ${x.getMessage}. See sbt log for details.").
-      fold(error => error.left[Unit],
-           code  => if (code == 0) ().right[String]
-                    else s"Execution error: $filename exited with $code".left[Unit]
-      )
+      leftMap(x => s"Could not run dabble due to: ${x.getMessage}. See sbt log for details.")//.
 
     case Exit(er: ExecutionResult2) => System.exit(er.code.code)
 

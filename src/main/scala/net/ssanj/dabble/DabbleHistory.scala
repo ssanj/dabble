@@ -1,15 +1,8 @@
 package net.ssanj.dabble
 
-
-import scala.util.Try
-
-import ammonite.ops._
-
 import scalaz._
 import scalaz.NonEmptyList.nels
 import scalaz.syntax.either._
-import scalaz.std.list._
-import scalaz.syntax.traverse._
 import DependencyParser._
 import ResolverParser._
 
@@ -41,7 +34,9 @@ trait DabbleHistory {
       import \&/._
       val validationNels = readHistory(cmdlnParser)(lines)
       val successes = validationNels.collect { case Success(dhl) => dhl }
-      val warnings  = validationNels.collect { case Failure(warningsNel) => warningsNel.list.toList } flatten
+      val warnings  = validationNels.collect {
+        case Failure(warningsNel) => warningsNel.list.toList
+      }.flatten
 
       if (successes.isEmpty && warnings.nonEmpty) This(warnings)
       else if (warnings.isEmpty && successes.nonEmpty) That(successes)

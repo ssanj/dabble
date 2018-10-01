@@ -5,7 +5,6 @@ import scala.util.Try
 
 import scalaz._
 import scalaz.NonEmptyList.nels
-import scalaz.syntax.either._
 import scalaz.syntax.bind._
 
 import DabbleResult._
@@ -39,9 +38,8 @@ object HistoryDsl {
 object HistoryCommands {
 
   import HistoryDsl._
-//3. Compose functions
 
-  //TODO: hLines should be a NonEmptyList, as we only call this method when we have results.
+  //3. Compose functions
   def getUserChoice(prompt: String,
                     hLines: NonEmptyList[DabbleHistoryLine]): DabbleScript[HistoryOption] = {
 
@@ -133,26 +131,24 @@ object HistoryCommands {
     //TODO: readHistoryFile is going to be common. Pull it out.
     //TODO: Do we need to distinguish between an empty history file and an absent one?
     hasHistoryFile <- fileExists(dabbleHomePath.history.path.file)
-    result <- if (!hasHistoryFile) noHistory.map(_ => dabbleSuccess)
-              else readHistoryFile(dabbleHomePath.history.path.file, argParser).flatMap {
-              case -\/(error) =>
-                liftDS(dabbleFailure(s"could not read history file: ${dabbleHomePath.history.path.file} due to: $error"))
-              case \/-(hlaw) =>
-                chooseHistory(searchTerm, prompt, hlaw, hMenu).flatMap {
-                  case QuitHistory => liftDS(dabbleSuccess)
-                  case HistorySelection(line) =>
-                    for {
-                      _      <- launchDabble(dabbleHomePath, line)
-                      result <- saveHistoryFile(dabbleHomePath.history.path.file,
-                                                line,
-                                                getHistoryLines(hlaw),
-                                                historyPrinter)
-                    } yield {
-                      val warnings = getWarnings(hlaw)
-                      result.fold(l => dabbleFailure(l, warnings:_*),
-                                  _ => dabbleSuccess(warnings))
-                    }
+    result <- {
+      if (!hasHistoryFile) noHistory.map(_ => dabbleSuccess)
+      else readHistoryFile(dabbleHomePath.history.path.file, argParser).flatMap {
+        case -\/(error) =>
+          liftDS(dabbleFailure(s"could not read history file: ${dabbleHomePath.history.path.file} due to: $error"))
+        case \/-(hlaw) =>
+          chooseHistory(searchTerm, prompt, hlaw, hMenu).flatMap {
+            case QuitHistory => liftDS(dabbleSuccess)
+            case HistorySelection(line) =>
+              launchSbtConsole(dabbleHomePath, line, argParser, historyPrinter).map { launchResult =>
+                val warnings = getWarnings(hlaw)
+                launchResult match {
+                  case DabbleSuccess(w) => DabbleSuccess(w ++ warnings)
+                  case DabbleFailure(errors) => DabbleFailure(errors :::> IList.fromList(warnings.toList))
                 }
-           }
+              }
+          }
+     }
+    }
   } yield result
 }

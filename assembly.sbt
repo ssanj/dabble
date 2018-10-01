@@ -11,7 +11,8 @@ mainClass in assembly := Some("net.ssanj.dabble.DabbleApp")
 import sbtassembly.AssemblyPlugin.defaultShellScript
 
 assemblyOption in assembly := {
-  if (isPlainJar) (assemblyOption in assembly).value.copy(prependShellScript = None)
-  else (assemblyOption in assembly).value.copy(prependShellScript = Some(defaultShellScript))
+  val ao = (assemblyOption in assembly).value
+  if (isPlainJar) ao.copy(prependShellScript = None)
+  else ao.copy(prependShellScript = Some(defaultShellScript))
 }
 

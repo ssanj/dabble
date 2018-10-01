@@ -1,10 +1,7 @@
 package net.ssanj.dabble
 
-import scala.language.implicitConversions
-
 import scalaz._
 import scalaz.Free._
-import scalaz.syntax.validation._
 
 //TODO: Figure out how to modularise this class. It's too long. We need to combine
 //classes to get this much information, alternatively import them.
