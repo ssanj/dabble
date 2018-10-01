@@ -6,7 +6,7 @@ assemblyJarName in assembly := {
   if (isPlainJar) s"${nameLower}.jar" else s"${nameLower}"
 }
 
-mainClass in assembly := Some("net.ssanj.dabble.DabbleApp")
+mainClass in assembly := Some("net.ssanj.dabble.DabbleConsoleInterpreter")
 
 import sbtassembly.AssemblyPlugin.defaultShellScript
 
