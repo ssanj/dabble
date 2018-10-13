@@ -32,7 +32,7 @@ trait Executor {
       log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
       genBuildFileFrom(dabbleHome, dependencies, resolvers, mpVersion)
 
-      val result = Try(%(getSBTExec, "console-quick")(dabbleHome.work.path)).fold(_ => -1, _ => 0)
+      val result = Try(%(getSBTExec, "consoleQuick")(dabbleHome.work.path)).fold(_ => -1, _ => 0)
 
       val (message, code) =
         if (result == 0) {
