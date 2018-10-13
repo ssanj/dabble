@@ -42,7 +42,7 @@ class DabbleConsoleInterpreter extends (DabbleDsl ~> Id) {
     case CallProcess(filename: String, arguments: String, workingDir: String) =>
       Try(%(filename, arguments)(Path(workingDir))).
       toDisjunction.
-      leftMap(x => s"Could not run dabble due to: ${x.getMessage}. See sbt log for details.")//.
+      leftMap(x => s"Could not run dabble due to: ${x.getMessage}. See sbt log for details.")
 
     case Exit(er: ExecutionResult2) => System.exit(er.code.code)
 
