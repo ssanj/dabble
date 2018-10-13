@@ -3,11 +3,8 @@ package net.ssanj.dabble
 import org.scalacheck.Properties
 import org.scalacheck.{Prop, Gen}
 import org.scalacheck.Prop.BooleanOperators
-import org.scalacheck.Gen.{posNum, negNum}
 import scalaz._
 import scalaz.std.list._
-
-import DabbleProps._
 
 object DependencyParserProps extends Properties("DependencyParser") with DabbleProps {
 

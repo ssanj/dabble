@@ -5,8 +5,6 @@ import ammonite.ops._
 import scalaz._
 import scalaz.NonEmptyList.nels
 import scalaz.syntax.std.`try`._
-import scalaz.syntax.either._
-import scalaz.syntax.applicative._
 import \&/.{This, That, Both}
 import DabblePrinter._
 import DabbleHistory._
@@ -34,24 +32,24 @@ trait Executor {
       log(s"${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}")
       genBuildFileFrom(dabbleHome, dependencies, resolvers, mpVersion)
 
-      val result = %(getSBTExec, "console-quick")(dabbleHome.work.path)
+      val result = Try(%(getSBTExec, "consoleQuick")(dabbleHome.work.path)).fold(_ => -1, _ => 0)
 
       val (message, code) =
         if (result == 0) {
           writeToHistoryFile(dependencies, resolvers, mpVersion, hlaw) match {
             case This(errors)      => (s"Could not update history file ${dabbleHome.history}," +
-                                        s" due to the following errors: ${errors.mkString(newline)}", -1)
+                                       s" due to the following errors: ${errors.mkString(newline)}", -1)
 
             case That(_)           => ("Dabble completed successfully.", result)
 
             case Both(warnings, _) => ("Dabble completed successfully" +
-                                        ", but had the following warnings: " +
-                                        s"${warnings.mkString(newline)}", result)
+                                       ", but had the following warnings: " +
+                                       s"${warnings.mkString(newline)}", result)
           }
         } else ("Could not launch console. See SBT output for details.", result)
 
       ExecutionResult(Option(message), code)
-    }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity)
+    }.toDisjunction.fold(x => ExecutionResult(Option(s"Could not launch console due to: ${x.getMessage}"), 1), identity(_))
   }
 
   def readFile(filename: Path): Seq[String] = {

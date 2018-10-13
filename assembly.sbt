@@ -6,12 +6,13 @@ assemblyJarName in assembly := {
   if (isPlainJar) s"${nameLower}.jar" else s"${nameLower}"
 }
 
-mainClass in assembly := Some("net.ssanj.dabble.DabbleApp")
+mainClass in assembly := Some("net.ssanj.dabble.DabbleConsoleInterpreter")
 
 import sbtassembly.AssemblyPlugin.defaultShellScript
 
 assemblyOption in assembly := {
-  if (isPlainJar) (assemblyOption in assembly).value.copy(prependShellScript = None)
-  else (assemblyOption in assembly).value.copy(prependShellScript = Some(defaultShellScript))
+  val ao = (assemblyOption in assembly).value
+  if (isPlainJar) ao.copy(prependShellScript = None)
+  else ao.copy(prependShellScript = Some(defaultShellScript))
 }
 

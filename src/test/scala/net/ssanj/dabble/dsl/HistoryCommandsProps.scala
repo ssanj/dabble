@@ -8,7 +8,6 @@ import org.scalacheck.{Prop, Gen}
 
 import scalaz.NonEmptyList.nels
 
-import DabblePrinter._
 import DabbleProps._
 import HistoryCommands._
 import net.ssanj.dabble.dsl.HistoryDsl.QuitHistory

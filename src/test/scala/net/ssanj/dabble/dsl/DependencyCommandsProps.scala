@@ -2,7 +2,7 @@ package net.ssanj.dabble
 package dsl
 
 import scala.io.Source
-import scala.collection.mutable.{Map => MMap, LinkedHashSet, ArrayBuffer}
+import scala.collection.mutable.{Map => MMap, LinkedHashSet}
 
 import org.scalacheck.Properties
 import org.scalacheck.{Prop, Gen}
@@ -72,7 +72,7 @@ object DependencyCommandsProps extends Properties("DependencyCommands") {
 
     val callProcProp = {
       val Some(Seq(args, workingDir)) = world.get(execName)
-      val argsProp = contentProp("arguments")(Seq(args), Seq("console-quick"))
+      val argsProp = contentProp("arguments")(Seq(args), Seq("consoleQuick"))
       val workingDirProp = contentProp("workingDir")(
         Seq(homePath.work.path.dir), Seq(s"${homePath.path.dir}/work"))
 
@@ -105,7 +105,7 @@ object DependencyCommandsProps extends Properties("DependencyCommands") {
           val buildFileContentsProp    = contentProp("build.sbt")(buildFileContent, Seq(expectedBuildFileContent))
 
           val procArgs   = world.get("sbt")
-          val launchProp = contentProp("launch args")(Seq(procArgs), Seq(Some(Seq("console-quick", dabbleHomePath.work.path.dir))))
+          val launchProp = contentProp("launch args")(Seq(procArgs), Seq(Some(Seq("consoleQuick", dabbleHomePath.work.path.dir))))
 
           val historyFileContent         = world.get(dabbleHomePath.history.path.file)
           val expectedHistoryFileContent = (LinkedHashSet() ++ (selection +: historyFile)).map(printHistoryLine).toSeq
@@ -159,7 +159,7 @@ object DependencyCommandsProps extends Properties("DependencyCommands") {
           val buildFileContentsProp    = contentProp("build.sbt")(buildFileContent, Seq(expectedBuildFileContent))
 
           val procArgs   = world.get("sbt")
-          val launchProp = contentProp("launch args")(Seq(procArgs), Seq(Some(Seq("console-quick", dabbleHomePath.work.path.dir))))
+          val launchProp = contentProp("launch args")(Seq(procArgs), Seq(Some(Seq("consoleQuick", dabbleHomePath.work.path.dir))))
 
           val historyFileContent         = world.get(dabbleHomePath.history.path.file)
           val expectedHistoryFileContent = (LinkedHashSet() ++ (selection +: historyFile)).map(printHistoryLine).toSeq
@@ -211,7 +211,7 @@ object DependencyCommandsProps extends Properties("DependencyCommands") {
               dabbleHomePath.history.path.file                                       -> historyFile.map(printHistoryLine),
               dabbleHomePath.defaultBuildFile.path.file                              -> Seq(sbtTemplate.content),
               "os.name"                                                              -> Seq("Linux 1.4.2"),
-              s"CallProcess.sbt.console-quick.${dabbleHomePath.work.path.dir}.error" -> Seq(writeError))
+              s"CallProcess.sbt.consoleQuick.${dabbleHomePath.work.path.dir}.error" -> Seq(writeError))
 
           val result = launchSbtConsole(dabbleHomePath, selection, historyLineParser, printHistoryLine).
             foldMap(new SaveHistoryFileInterpreter(world))

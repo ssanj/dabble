@@ -2,15 +2,12 @@ package net.ssanj.dabble
 
 import scala.util.Try
 
-import ammonite.ops._
-
 import scalaz.{-\/, \/-, \/}
 import scalaz.syntax.either._
 import scalaz.NonEmptyList.nels
 import scalaz.syntax.std.`try`._
 
 import DabbleDslDef._
-import DabblePaths._
 import DabblePathTypes._
 import DabbleHistory._
 import DependencyParser._

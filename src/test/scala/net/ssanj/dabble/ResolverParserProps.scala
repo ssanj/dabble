@@ -1,12 +1,10 @@
 package net.ssanj.dabble
 
 import org.scalacheck.Properties
-import org.scalacheck.{Prop, Gen}
+import org.scalacheck.Prop
 import org.scalacheck.Prop.BooleanOperators
 
 import scalaz._
-
-import ResolverParser._
 
 object ResolverParserProps extends Properties("ResolverParser") with DabbleProps {
 
