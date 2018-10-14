@@ -76,24 +76,24 @@ scala>
 To get a executable on Linux or Macosx run:
 
 ```
-curl -L -o dabble https://git.io/vr8B3; chmod +x dabble; ./dabble -h
+curl -L -o dabble https://git.io/fxR8F; chmod +x dabble; ./dabble -h
 ```
 
 To get a plain jar file run:
 
 ```
-curl -L -o dabble.jar https://git.io/vr8BH; java -jar dabble.jar -h
+curl -L -o dabble.jar https://git.io/fxR8b; java -jar dabble.jar -h
 ```
 
 ### Windows
 
-Download the [dabble.jar](https://git.io/vr8BH) file and run:
+Download the [dabble.jar](https://git.io/fxR8b) file and run:
 
 ```
 java -jar dabble.jar -h
 ```
 
-Alternatively, also download the [dabble.bat](https://git.io/vr80p) file into the same directory and run it via:
+Alternatively, also download the [dabble.bat](https://git.io/fxR8p) file into the same directory and run it via:
 
 ```
 dabble.bat -h
