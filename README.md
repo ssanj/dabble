@@ -271,3 +271,67 @@ Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
   Example:
   2.1.0
 ```
+
+## Releasing
+
+Bump version in build.sbt
+
+Create the Linux/Macos-specific jar:
+```
+sbt assembly
+```
+
+Create the plain jar:
+
+```
+sbt -Dplain.jar assembly
+```
+
+This will update build.properties
+
+Commit changes, tag and push:
+
+```
+git cm changes
+```
+
+```
+git tag -a newversion
+```
+
+```
+git push
+```
+
+```
+git push --tags
+```
+
+Create release in Github against tag
+
+Upload the artifacts from the _target/scala-version/dabble_ directory:
+
+- dabble
+- dabble.jar
+- dabble.bat (download from a previous version and upload)
+
+Update the README.md with the [Github link shortener](https://blog.github.com/2011-11-10-git-io-github-url-shortener/) to these downloads:
+
+curl -i https://git.io -F "url=https://github.com/ssanj/dabble/releases/download/version/dabble.jar"
+
+curl -i https://git.io -F "url=https://github.com/ssanj/dabble/releases/download/version/dabble"
+
+Update the README with these new links.
+
+Update the Homebrew tap with the latest sha:
+
+```
+shasum -a 256 target/scala-version/dabble
+```
+
+Commit and push the Homebrew tap:
+
+```
+git cm
+git push
+```
