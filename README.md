@@ -13,7 +13,7 @@ Let Dabble handle the details for you. Simply run __dabble__ with the libraries 
 
 ## Requirements
 
-SBT 0.13.x
+SBT 1.x, Scala 2.12.x
 
 ## Example
 
