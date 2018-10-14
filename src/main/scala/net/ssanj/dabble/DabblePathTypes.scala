@@ -30,13 +30,13 @@ trait DabblePathTypes {
   case class DabbleDefaultWorkBuildFile(path: FilePath)
 
   case class DabbleHomePath(path: DirPath) {
-    val work      = DabbleWorkPath(path/dirPath("work"))
-    val templates = DabbleTemplatesPath(path/dirPath("templates"))
-    val history   = DabbleHistoryFilePath(path/"dabble.history")
-    val defaultBuildFile = DabbleDefaultBuildFile(path/"build.sbt")
+    val work      = DabbleWorkPath(path/dirPath(workDir))
+    val templates = DabbleTemplatesPath(path/dirPath(templatesDir))
+    val history   = DabbleHistoryFilePath(path/historyFile)
+    val defaultBuildFile = DabbleDefaultBuildFile(path/buildFile)
   }
 
-  def dabbleHomePath(userHome: String): DabbleHomePath = DabbleHomePath(dirPath(userHome))
+  def dabbleHomePath(userHome: String): DabbleHomePath = DabbleHomePath(dirPath(userHome)/dirPath(appDir))
 }
 
 object DabblePathTypes extends DabblePathTypes

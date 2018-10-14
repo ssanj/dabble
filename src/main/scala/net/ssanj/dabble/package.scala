@@ -66,7 +66,11 @@ package object dabble {
   val tabAsSpaces              = "  "
   val newlineAndTab            = s"${newline}${tab}"
   val escapedNewline           = newline.replace("\n", "\\\\n").replace("\r", "\\\\r")
-  val defaultBuildFile         = "build.sbt"
+  val buildFile                = "build.sbt"
+  val historyFile              = "dabble.history"
+  val templatesDir             = "templates"
+  val appDir                   = ".dabble"
+  val workDir                  = "work"
   lazy val title               = s"${DabbleInfo.name} version: ${DabbleInfo.version}-b${DabbleInfo.buildInfoBuildNumber}"
 
   def log(messages: String*): Unit = println(s"${DabbleInfo.name}: ${messages.mkString(newline)}")
