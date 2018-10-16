@@ -324,7 +324,7 @@ Update the README with these new links.
 
 Update version [pill](https://img.shields.io/badge/dabble-version-brightgreen.svg)
 
-Update the Homebrew tap with the latest sha:
+Update the [Homebrew tap](https://github.com/ssanj/homebrew-dabble) with the latest version and sha:
 
 ```
 shasum -a 256 target/scala-version/dabble
