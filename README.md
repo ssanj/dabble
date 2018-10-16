@@ -145,23 +145,15 @@ dabble.bat <dependencies>
 
 ## Install on OSX using with [brew](https://github.com/mxcl/homebrew)
 
-edwardsmatt created a [brew](https://github.com/mxcl/homebrew) tap for installing the latest version (or `HEAD`) using [brew](https://github.com/mxcl/homebrew). The instructions are below, (or you can checkout the recipe for further details [here](https://github.com/edwardsmatt/homebrew-dabble)):
+Thanks to [edwardsmatt](https://github.com/edwardsmatt) for creating a [brew](https://github.com/mxcl/homebrew) tap for dabble.
 
 First, add this tap to your Brew.
 
-    brew tap edwardsmatt/homebrew-dabble
+    brew tap ssanj/homebrew-dabble
 
 Now you will be able to install the latest dabble release:
 
     brew install dabble
-
-or the latest HEAD using:
-
-    brew install dabble --HEAD
-
-or, if you want more information about the install you can use:
-
-    brew install dabble --HEAD --debug --verbose
 
 ## Running
 
@@ -221,7 +213,9 @@ dabble "com.github.mpilquist" %% "simulacrum" % "0.7.0" -mp "2.1.0"
 
 ## Configuration
 
-Dabble operates out of the ~/.dabble directory. When you run dabble, a minimal build.sbt file is generated and written to ~/.dabble/build.sbt. The ~/.dabble/work directory is then used to run the build and contains all artefacts. You can override the default build.sbt by placing your own build.sbt file under ~/.dabble/.
+Dabble operates out of the ~/.dabble directory. When you run dabble, a minimal build.sbt file is generated and written to the ~/.dabble/work directory. This is then used to run the build containing all the artefacts. You can override the generated build.sbt by placing your own build.sbt file under ~/.dabble/.
+
+You can also override the sbt version used by specifying a version in the ~/.dabble/work/project/build.properties file.
 
 You can get a full list of arguments to dabble by running it with -h or --help:
 
