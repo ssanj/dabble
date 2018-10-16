@@ -39,13 +39,17 @@ object DabbleDslRunner extends App {
 
           getBanner.foreach(println)
 
-          val result =
-            Try(launchSbtConsole(dabbleHomePath(userHome),
-                                 line,
-                                 argParser,
-                                 historyPrinter).
-                foldMap(new DabbleConsoleInterpreter)).
-              toDisjunction
+          val result = Try {
+            (for {
+              userHomeE <- systemProp("user.home")
+              //throw here because we can't recover if the user's home dir is not available
+              userHome  = userHomeE.fold(msg => throw new IllegalStateException(msg), identity)
+              dr        <- launchSbtConsole(dabbleHomePath(userHome),
+                                           line,
+                                           argParser,
+                                           historyPrinter)
+            } yield dr).foldMap(new DabbleConsoleInterpreter)
+          }.toDisjunction
 
           handleProgramResult(result)
       }

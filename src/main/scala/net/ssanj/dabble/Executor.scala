@@ -87,8 +87,8 @@ trait Executor {
   def genBuildFileFrom(home: DabbleHome, dependencies: Seq[Dependency], resolvers: Seq[Resolver],
     mpVersion: Option[String]): Unit = {
 
-    val defaultSbtTemplate   = home.path/defaultBuildFile
-    val outputSBTFile        = home.work.path/defaultBuildFile
+    val defaultSbtTemplate   = home.path/buildFile
+    val outputSBTFile        = home.work.path/buildFile
     val sbtTemplateContent   =
       if (exists(defaultSbtTemplate)) {
         log(s"Using default sbt template at: ${defaultSbtTemplate}")
