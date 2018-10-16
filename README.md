@@ -220,15 +220,13 @@ You can also override the sbt version used by specifying a version in the ~/.dab
 You can get a full list of arguments to dabble by running it with -h or --help:
 
 ```
-Dabble version: 0.0.3-b892
-Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
+Dabble version: 0.4.1-b3371
+Usage: Dabble [history] [options] [<dep1> + <dep2> + ... <depn>]
 
-  -h | --help
-
-  -v | --version
-
+  -h, --help
+  -v, --version
   <dep1> + <dep2> + ... <depn>
-  The list of dependencies to include.
+                           The list of dependencies to include.
   Multiple dependencies should be separated by a + sign.
 
   Format is one of:
@@ -240,8 +238,8 @@ Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
   Example:
   "com.github.scopt" %% "scopt" % "3.4.0" + "org.scalaz" %% "scalaz-core" % "7.2.2"
 
-  -r "<res1>,<res2>, .... <resn>" | --resolvers "<res1>,<res2>, .... <resn>"
-  The list of additional repositories to resolve dependencies from.
+  -r, --resolvers "<res1>,<res2>, .... <resn>"
+                           The list of additional repositories to resolve dependencies from.
   Multiple dependencies should be separated by commas.
 
   Format is one of:
@@ -260,11 +258,17 @@ Usage: Dabble [options] <dep1> + <dep2> + ... <depn>
   Example:
   "bintray:oncue:releases, sonatype:r"
 
-  -mp <version> | --macro-paradise <version>
-  Includes the macro paradise compiler plugin with the supplied version.
+  -mp, --macro-paradise <version>
+                           Includes the macro paradise compiler plugin with the supplied version.
 
   Example:
   2.1.0
+
+Please see https://github.com/ssanj/dabble for more examples.
+Command: history [options]
+command history.
+  -t, --term <search term>
+                           The term to search through history for
 ```
 
 ## Releasing
