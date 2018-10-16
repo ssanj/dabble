@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/ssanj/dabble.svg?branch=master)](https://travis-ci.org/ssanj/dabble)
+[![Build Status](https://travis-ci.org/ssanj/dabble.svg?branch=master)](https://travis-ci.org/ssanj/dabble) [![0.4.1](https://img.shields.io/badge/dabble-v0.4.1-brightgreen.svg)](https://github.com/ssanj/dabble/releases/tag/v0.4.1)
+
 
 # Dabble
 
@@ -76,18 +77,18 @@ scala>
 To get a executable on Linux or Macosx run:
 
 ```
-curl -L -o dabble https://git.io/fxR8F; chmod +x dabble; ./dabble -h
+curl -L -o dabble https://git.io/fxuNb; chmod +x dabble; ./dabble -h
 ```
 
 To get a plain jar file run:
 
 ```
-curl -L -o dabble.jar https://git.io/fxR8b; java -jar dabble.jar -h
+curl -L -o dabble.jar https://git.io/fxuN9; java -jar dabble.jar -h
 ```
 
 ### Windows
 
-Download the [dabble.jar](https://git.io/fxR8b) file and run:
+Download the [dabble.jar](https://git.io/fxuN9) file and run:
 
 ```
 java -jar dabble.jar -h
@@ -322,6 +323,8 @@ curl -i https://git.io -F "url=https://github.com/ssanj/dabble/releases/download
 curl -i https://git.io -F "url=https://github.com/ssanj/dabble/releases/download/version/dabble"
 
 Update the README with these new links.
+
+Update version [pill](https://img.shields.io/badge/dabble-version-brightgreen.svg)
 
 Update the Homebrew tap with the latest sha:
 
